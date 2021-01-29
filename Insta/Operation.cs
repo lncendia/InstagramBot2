@@ -77,18 +77,44 @@ namespace Insta
             await using DB db = new DB();
             foreach (var user in users)
             {
-                foreach (var subscribe in user.Subscribes.ToList().Where(subscribe => subscribe.EndSubscribe.CompareTo(DateTime.Now) <= 0))
+                var accounts = user.Instagrams.ToList().Where(x=>!x.IsDeactivated).ToList();
+                var overdue = user.Subscribes.ToList()
+                    .Where(subscribe => subscribe.EndSubscribe.CompareTo(DateTime.Now) <= 0).ToList();
+                foreach (var subscribe in overdue)
                 {
                     db.UpdateRange(user,subscribe);
                     db.Remove(subscribe);
-                    var inst = user.Instagrams.ToList().LastOrDefault(x => x.IsDeactivated == false);
-                    if(inst!=null) inst.IsDeactivated = true;
-                    await Tgbot.SendTextMessageAsync(user.Id,
-                        $"Действие подписки завершилось. Аккаунт {inst.Username} деактивирован.");
+                }
+                var accountsUsername = string.Empty;
+                for(var i = accounts.Count-(user.Subscribes.Count-overdue.Count);i>0;i--)
+                {
+                    var inst = accounts[^i];
+                    if (inst == null) continue;
+                    db.UpdateRange(inst);
+                    inst.IsDeactivated = true;
+                    accountsUsername += ", " + inst.Username;
+                }
+                try
+                {
+                    if (overdue.Count > 0)
+                    {
+                        if(accountsUsername!=String.Empty)
+                            await Tgbot.SendTextMessageAsync(user.Id,
+                                $"Действие {overdue.Count} подписки(ок) завершилось. Аккаунт(ы) {accountsUsername[2..]} деактивирован(ы).");
+                        else
+                        {
+                            await Tgbot.SendTextMessageAsync(user.Id,
+                                $"Действие {overdue.Count} подписки(ок) завершилось.");
+                        }
+                    }
+                }
+                catch
+                {
+                    // ignored
                 }
             }
             await db.SaveChangesAsync();
-            //await Task.Delay(new TimeSpan(1, 0, 0, 0));
+            await Task.Delay(new TimeSpan(1, 0, 0, 0));
         }
     }
 }

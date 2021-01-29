@@ -48,11 +48,12 @@ namespace Insta
                 db.Update(user);
                 db.Add(new Transaction(){Amount = (int)response.Amount.ValueDecimal, User=user});
                 db.SaveChanges();
-                for (int i = (int) response.Amount.ValueDecimal / 120; i > 0; i--)
+                for (var i = (int) response.Amount.ValueDecimal / 120; i > 0; i--)
                 {
                     db.Add(new Subscribe() {User = user});
-                    var inst = user.Instagrams.ToList().FirstOrDefault(x => x.IsDeactivated = true);
-                    if (inst != null) inst.IsDeactivated = false;
+                    var inst = user.Instagrams.ToList().FirstOrDefault(x => x.IsDeactivated);
+                    if (inst == null) continue;
+                    inst.IsDeactivated = false;
                 }
                 db.SaveChanges();
                 return true;
