@@ -26,7 +26,7 @@ namespace Insta
                     .SetUser(userSession)
                     .Build();
                 if (instaApi.IsUserAuthenticated) return null;
-                Console.WriteLine($"Logging in as {userSession.UserName}");
+                //Console.WriteLine($"Logging in as {userSession.UserName}");
                 var logInResult = await instaApi.LoginAsync();
                 if (logInResult.Value == InstaLoginResult.Success && !logInResult.Succeeded) return null;
                 instagram.api = instaApi;
