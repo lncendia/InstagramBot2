@@ -102,7 +102,7 @@ namespace Insta
                         continue;
                     }
                     j = 0;
-                    Console.WriteLine($"{GetUsername()}: #{Hashtag}, {true}");
+                    //Console.WriteLine($"{GetUsername()}: #{Hashtag}, {true}");
                     await Task.Delay(Duration);
                 }
 

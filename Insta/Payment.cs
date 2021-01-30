@@ -44,7 +44,7 @@ namespace Insta
             {
                 using var db = new DB();
                 var response = Client.GetBillInfo(billId);
-                //if (response.Status.ValueEnum != BillStatusEnum.Paid) return false;
+                if (response.Status.ValueEnum != BillStatusEnum.Paid) return false;
                 db.Update(user);
                 db.Add(new Transaction(){Amount = (int)response.Amount.ValueDecimal, User=user});
                 db.SaveChanges();
