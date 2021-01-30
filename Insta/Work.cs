@@ -81,6 +81,7 @@ namespace Insta
                 int j=0;
                 foreach (var post in posts.Value.Medias)
                 {
+                    if(post.HasLiked) continue;
                     if (CancelTokenSource.IsCancellationRequested)
                     {
                         SendMessageStop(true);
@@ -92,14 +93,16 @@ namespace Insta
                         return;
                     }
 
-                    if (!(await Api.MediaProcessor.LikeMediaAsync(post.InstaIdentifier)).Value)
+                    var like = await Api.MediaProcessor.LikeMediaAsync(post.InstaIdentifier);
+                    bool success = like.Value;
+                    if (!success)
                     {
                         j++;
                         await Task.Delay(Duration);
                         continue;
                     }
                     j = 0;
-                    Console.WriteLine($"{GetUsername()}: #{Hashtag}, {(await Api.MediaProcessor.LikeMediaAsync(post.InstaIdentifier)).Value}");
+                    Console.WriteLine($"{GetUsername()}: #{Hashtag}, {true}");
                     await Task.Delay(Duration);
                 }
 
