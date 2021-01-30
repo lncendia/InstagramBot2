@@ -132,7 +132,7 @@ namespace Insta
         {
             try
             {
-                if(message!="")Console.WriteLine($"У {GetUsername()} ошибка. {message}");
+                //if(message!="")Console.WriteLine($"У {GetUsername()} ошибка. {message}");
                 Owner.Works.Remove(this);
                 TelegramBotClient tgbot = new TelegramBotClient("1682222171:AAGw4CBCJ875NRn1rFnh0sBncYkev5KIa4o");
                 if (finished)

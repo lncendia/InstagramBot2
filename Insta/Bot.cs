@@ -196,11 +196,17 @@ namespace Insta
                         break;
                     case "stopWorking":
                         if (user.state != User.State.main) return;
+                        if (user.Works.Count == 0)
+                        {
+                            await Tgbot.SendTextMessageAsync(e.CallbackQuery.From.Id,
+                                "У вас нет активных отработок.");
+                            break;
+                        }
                         foreach (var x in user.Works.ToList())
                         {
                             var str = x.IsStarted ? "Уже началась" : "Еще не началась";
                             await Tgbot.SendTextMessageAsync(e.CallbackQuery.From.Id,
-                                $"Аккаунт {x.GetUsername()}. Хештег {x.Hashtag}. {str}.",
+                                $"Аккаунт {x.GetUsername()}. Хештег #{x.Hashtag}. {str}.",
                                 replyMarkup: new InlineKeyboardMarkup(
                                     InlineKeyboardButton.WithCallbackData("🛑 Отменить", $"cancel_{x.Id}")));
                         }
