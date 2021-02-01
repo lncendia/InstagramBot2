@@ -17,15 +17,6 @@ namespace Insta
             new TelegramBotClient("1682222171:AAGw4CBCJ875NRn1rFnh0sBncYkev5KIa4o");
 
         public static List<User> Users;
-
-        private static readonly ReplyKeyboardMarkup Keyboard = new ReplyKeyboardMarkup(new List<List<KeyboardButton>>
-        {
-            new List<KeyboardButton>() {new KeyboardButton("🌇 Мои аккаунты"), new KeyboardButton("❤ Отработка") },
-            new List<KeyboardButton>() {new KeyboardButton("💰 Оплатить подписку") },
-            new List<KeyboardButton>() {new KeyboardButton("📄 Инструкция"),new KeyboardButton("🤝 Поддержка") }
-        });
-
-        private static readonly string[] Emodji = { "🏞","🏔","🏖","🌋","🏜","🏕","🌎","🗽","🌃", "☘", "🐲", "🌸", "🌓", "🍃", "☀", "☁" };
         private static Random rnd = new Random();
         public static void Start()
         {
@@ -37,29 +28,6 @@ namespace Insta
             Tgbot.OnCallbackQuery += Tgbot_OnCallbackQuery;
             Tgbot.StartReceiving();
         }
-
-        private static readonly InlineKeyboardMarkup KeyBack =
-            new InlineKeyboardMarkup(InlineKeyboardButton.WithCallbackData("🔙 Назад", "back"));
-        private static readonly InlineKeyboardMarkup KeyMain =
-            new InlineKeyboardMarkup(InlineKeyboardButton.WithCallbackData("⭐ В главное меню", "mainMenu"));
-
-        private static readonly InlineKeyboardMarkup Keys = new InlineKeyboardMarkup(
-            new List<List<InlineKeyboardButton>>
-            {
-                new List<InlineKeyboardButton>
-                    {InlineKeyboardButton.WithCallbackData("🏃 Начать отработку", "startWorking")},
-                new List<InlineKeyboardButton>
-                    {InlineKeyboardButton.WithCallbackData("⚙ Активные отработки", "stopWorking")}
-            });
-        private static readonly InlineKeyboardMarkup StartWork = new InlineKeyboardMarkup(
-            new List<List<InlineKeyboardButton>>
-            {
-                new List<InlineKeyboardButton>
-                    {InlineKeyboardButton.WithCallbackData("🏃 Начать сейчас", "startNow"),InlineKeyboardButton.WithCallbackData("⌛ Начать позже", "startLater")},
-                new List<InlineKeyboardButton>
-                    {InlineKeyboardButton.WithCallbackData("🛑 Отмена", "mainMenu")}
-            });
-
         private static async void Tgbot_OnCallbackQuery(object sender, Telegram.Bot.Args.CallbackQueryEventArgs e)
         {
             try
@@ -124,14 +92,14 @@ namespace Insta
                     {
                         await Tgbot.AnswerCallbackQueryAsync(e.CallbackQuery.Id,
                             "Нvеобходима аутентификация. Пожалуйста, подождите...");
-                        user.enterData = inst;
-                        var login = await Operation.CheckLoginAsync(user.enterData);
+                        user.EnterData = inst;
+                        var login = await Operation.CheckLoginAsync(user.EnterData);
                         if (login?.Value != InstaLoginResult.Success)
                         {
                             await Tgbot.SendTextMessageAsync(e.CallbackQuery.From.Id, 
                                 "Не удалось войти. Инстаграм будет удален, попробуйте войти в него заново.");
                             await Tgbot.DeleteMessageAsync(e.CallbackQuery.From.Id, e.CallbackQuery.Message.MessageId);
-                            user.enterData = null;
+                            user.EnterData = null;
                             await using DB db = new DB();
                             db.UpdateRange(user, inst);
                             user.Instagrams.Remove(inst);
@@ -141,13 +109,13 @@ namespace Insta
                             return;
                         }
                     }
+                    user.state = User.State.selectMode;
                     var work = new Work(user.Works.Count, inst.api, user);
-                    user.Works.Add(work);
                     user.CurrentWork = work;
-                    user.state = User.State.selectHashtag;
-                        await Tgbot.SendTextMessageAsync(e.CallbackQuery.From.Id,
-                            "Введите хештег без #.", replyMarkup: KeyMain);
-                        return;
+                    user.state = User.State.selectMode;
+                    await Tgbot.SendTextMessageAsync(e.CallbackQuery.From.Id,
+                        "Выберите режим.", replyMarkup: Keyboards.SelectMode);
+                    return;
                 }
 
                 if (cb.StartsWith("cancel"))
@@ -182,6 +150,27 @@ namespace Insta
 
                 switch (cb)
                 {
+                    case "startLike":
+                        if(user.state!=User.State.selectMode) return;
+                        user.CurrentWork.SetMode(Work.Mode.like);
+                        user.state = User.State.selectHashtag;
+                        await Tgbot.SendTextMessageAsync(e.CallbackQuery.From.Id,
+                            "Введите хештег без #.", replyMarkup: Keyboards.Main);
+                        break;
+                    case "startSave":
+                        if(user.state!=User.State.selectMode) return;
+                        user.CurrentWork.SetMode(Work.Mode.save);
+                        user.state = User.State.selectHashtag;
+                        await Tgbot.SendTextMessageAsync(e.CallbackQuery.From.Id,
+                            "Введите хештег без #.", replyMarkup: Keyboards.Main);
+                        break;
+                    case "startAll":
+                        if(user.state!=User.State.selectMode) return;
+                        user.CurrentWork.SetMode(Work.Mode.likeAndSave);
+                        user.state = User.State.selectHashtag;
+                        await Tgbot.SendTextMessageAsync(e.CallbackQuery.From.Id,
+                            "Введите хештег без #.", replyMarkup: Keyboards.Main);
+                        break;
                     case "startWorking":
                         if(user.state!=User.State.main) return;
                         await Tgbot.SendTextMessageAsync(e.CallbackQuery.From.Id,
@@ -189,9 +178,8 @@ namespace Insta
                         foreach (var x in user.Instagrams)
                         {
                             await Tgbot.SendTextMessageAsync(e.CallbackQuery.From.Id,
-                                $"{Emodji[rnd.Next(0, Emodji.Length)]} Аккаунт {x.Username}",
-                                replyMarkup: new InlineKeyboardMarkup(
-                                    InlineKeyboardButton.WithCallbackData("Выбрать", $"select_{x.Id}")));
+                                $"{Keyboards.Emodji[rnd.Next(0, Keyboards.Emodji.Length)]} Аккаунт {x.Username}",
+                                replyMarkup: Keyboards.Select(x.Id));
                         }
                         break;
                     case "stopWorking":
@@ -207,8 +195,7 @@ namespace Insta
                             var str = x.IsStarted ? "Уже началась" : "Еще не началась";
                             await Tgbot.SendTextMessageAsync(e.CallbackQuery.From.Id,
                                 $"Аккаунт {x.GetUsername()}. Хештег #{x.Hashtag}. {str}.",
-                                replyMarkup: new InlineKeyboardMarkup(
-                                    InlineKeyboardButton.WithCallbackData("🛑 Отменить", $"cancel_{x.Id}")));
+                                replyMarkup: Keyboards.Cancel(x.Id));
                         }
                         break;
                     case "startNow":
@@ -225,7 +212,7 @@ namespace Insta
                             e.CallbackQuery.Message.MessageId);
                         user.state = User.State.setDate;
                         await Tgbot.SendTextMessageAsync(e.CallbackQuery.From.Id,
-                            "Введите время запуска по МСК в формате ЧЧ:мм. (Пример: 13:30).",replyMarkup: KeyBack);
+                            "Введите время запуска по МСК в формате ЧЧ:мм. (Пример: 13:30).",replyMarkup: Keyboards.Back);
                         break;
                     case "enterData":
                         if(user.state!=User.State.main) return;
@@ -234,23 +221,23 @@ namespace Insta
                         if (user.Instagrams.Count >=user.Subscribes.Count)
                         {
                             await Tgbot.SendTextMessageAsync(e.CallbackQuery.From.Id,
-                                "Увы... Так не работает.", replyMarkup: KeyMain);
+                                "Увы... Так не работает.");
                             return;
                         }
-                        user.enterData = new Instagram(){User=user};
+                        user.EnterData = new Instagram(){User=user};
                         user.state = User.State.login;
                         await Tgbot.SendTextMessageAsync(e.CallbackQuery.From.Id,
-                            "Введите логин", replyMarkup: KeyMain);
+                            "Введите логин", replyMarkup: Keyboards.Main);
                         break;
                     case "acceptEntry":
                         if(user.state!=User.State.challengeRequired) return;
-                        var login = await Operation.CheckLoginAsync(user.enterData);
+                        var login = await Operation.CheckLoginAsync(user.EnterData);
                         if (await Login(user, login))
                         {
                             await using DB db = new DB();
                             db.Update(user);
-                            db.Add(user.enterData);
-                            user.enterData = null;
+                            db.Add(user.EnterData);
+                            user.EnterData = null;
                             await db.SaveChangesAsync();
                             await Tgbot.DeleteMessageAsync(e.CallbackQuery.From.Id,
                                 e.CallbackQuery.Message.MessageId);
@@ -260,7 +247,7 @@ namespace Insta
                     case "challengeEmail":
                         if (user.state != User.State.challengeRequired) return;
                         await Tgbot.DeleteMessageAsync(e.CallbackQuery.From.Id, e.CallbackQuery.Message.MessageId);
-                        var response = await user.enterData.api.RequestVerifyCodeToEmailForChallengeRequireAsync();
+                        var response = await user.EnterData.api.RequestVerifyCodeToEmailForChallengeRequireAsync();
                         if (!response.Succeeded)
                         {
                             await Tgbot.SendTextMessageAsync(e.CallbackQuery.From.Id,
@@ -270,12 +257,12 @@ namespace Insta
                         }
                         user.state = User.State.challengeRequiredAccept;
                         await Tgbot.SendTextMessageAsync(e.CallbackQuery.From.Id,
-                            "Код отправлен. Введите код из сообщения.", replyMarkup: KeyMain);
+                            "Код отправлен. Введите код из сообщения.", replyMarkup: Keyboards.Main);
                         break;
                     case "challengePhone":
                         if (user.state != User.State.challengeRequired) return;
                         await Tgbot.DeleteMessageAsync(e.CallbackQuery.From.Id, e.CallbackQuery.Message.MessageId);
-                        var response2 = await user.enterData.api.RequestVerifyCodeToSMSForChallengeRequireAsync();
+                        var response2 = await user.EnterData.api.RequestVerifyCodeToSMSForChallengeRequireAsync();
                         if (!response2.Succeeded)
                         {
                             await Tgbot.SendTextMessageAsync(e.CallbackQuery.From.Id,
@@ -284,7 +271,7 @@ namespace Insta
                         }
                         user.state = User.State.challengeRequiredAccept;
                         await Tgbot.SendTextMessageAsync(e.CallbackQuery.From.Id,
-                            "Код отправлен. Введите код из сообщения.",replyMarkup:KeyMain);
+                            "Код отправлен. Введите код из сообщения.",replyMarkup: Keyboards.Main);
                         break;
                     case "back":
                         switch (user.state)
@@ -294,25 +281,30 @@ namespace Insta
                                 await Tgbot.DeleteMessageAsync(e.CallbackQuery.From.Id,
                                     e.CallbackQuery.Message.MessageId);
                                 await Tgbot.SendTextMessageAsync(e.CallbackQuery.From.Id,
-                                    "Введите логин", replyMarkup: KeyMain);
+                                    "Введите логин", replyMarkup: Keyboards.Main);
                                 break;
-                            case User.State.twofactor:
+                            case User.State.twoFactor:
                                 user.state = User.State.password;
                                 await Tgbot.DeleteMessageAsync(e.CallbackQuery.From.Id,
                                     e.CallbackQuery.Message.MessageId);
                                 await Tgbot.SendTextMessageAsync(e.CallbackQuery.From.Id,
-                                    "Теперь введите пароль", replyMarkup: KeyBack);
+                                    "Теперь введите пароль", replyMarkup: Keyboards.Back);
+                                break;
+                            case User.State.selectMode:
+                                user.state = User.State.selectMode;
+                                await Tgbot.EditMessageTextAsync(e.CallbackQuery.InlineMessageId,
+                                    "Выберите режим.", replyMarkup: Keyboards.SelectMode);
                                 break;
                             case User.State.setDuration:
                                 user.state = User.State.selectHashtag;
                                 await Tgbot.DeleteMessageAsync(e.CallbackQuery.From.Id,
                                     e.CallbackQuery.Message.MessageId);
                                 await Tgbot.SendTextMessageAsync(e.CallbackQuery.From.Id,
-                                    "Введите хештег. Решётку писать не нужно.", replyMarkup: KeyMain);
+                                    "Введите хештег. Решётку писать не нужно.", replyMarkup: Keyboards.Back);
                                 break;
                             case User.State.setDate:
                                 await Tgbot.SendTextMessageAsync(e.CallbackQuery.From.Id,
-                                    "Выбирете, когда хотите начать.", replyMarkup: StartWork);
+                                    "Выбирете, когда хотите начать.", replyMarkup: Keyboards.StartWork);
                                 user.state = User.State.setTimeWork;
                                 break;
 
@@ -324,10 +316,10 @@ namespace Insta
                             e.CallbackQuery.Message.MessageId);
                         user.Works.Remove(user.CurrentWork);
                         user.CurrentWork = null;
-                        user.enterData = null;
+                        user.EnterData = null;
                         user.state = User.State.main;
                         await Tgbot.SendTextMessageAsync(e.CallbackQuery.From.Id,
-                            "Вы в главном меню.", replyMarkup: Keyboard);
+                            "Вы в главном меню.", replyMarkup: Keyboards.MainKeyboard);
                         break;
 
                 }
@@ -355,7 +347,7 @@ namespace Insta
                     await db.SaveChangesAsync();
                     await Tgbot.SendStickerAsync(message.From.Id,
                         new InputOnlineFile("CAACAgIAAxkBAAK_HGAQINBHw7QKWWRV4LsEU4nNBxQ3AAKZAAPZvGoabgceWN53_gIeBA"),
-                        replyMarkup: Keyboard);
+                        replyMarkup: Keyboards.MainKeyboard);
                     await Tgbot.SendTextMessageAsync(message.Chat.Id,
                         "Добро пожаловать.\nДля дальнейшей работы тебе необходимо оплатить подписку и ввести данные своего instagram.");
                     return;
@@ -366,16 +358,15 @@ namespace Insta
                     case "/start":
                         if (user.state != User.State.main) break;
                         await Tgbot.SendTextMessageAsync(message.Chat.Id,
-                            "Вы в главном меню.", replyMarkup: Keyboard);
+                            "Вы в главном меню.", replyMarkup: Keyboards.MainKeyboard);
                         break;
                     case "🌇 Мои аккаунты":
                         if (user.state != User.State.main) break;
                         foreach (var x in user.Instagrams)
                         {
                             await Tgbot.SendTextMessageAsync(message.Chat.Id,
-                                $"{Emodji[rnd.Next(0,Emodji.Length)]} Аккаунт {x.Username}",
-                                replyMarkup: new InlineKeyboardMarkup(
-                                    InlineKeyboardButton.WithCallbackData("🚪 Выйти", $"exit_{x.Id}")));
+                                $"{Keyboards.Emodji[rnd.Next(0, Keyboards.Emodji.Length)]} Аккаунт {x.Username}",
+                                replyMarkup: Keyboards.Exit(x.Id));
                         }
                         if(user.Instagrams.Count<user.Subscribes.Count)
                             await Tgbot.SendTextMessageAsync(message.Chat.Id,
@@ -385,13 +376,13 @@ namespace Insta
                         else
                         {
                             await Tgbot.SendTextMessageAsync(message.Chat.Id,
-                                "Оплатите подписку, чтобы добавить аккаунт.", replyMarkup: Keyboard);
+                                "Оплатите подписку, чтобы добавить аккаунт.", replyMarkup: Keyboards.MainKeyboard);
                         }
                         break;
                     case "❤ Отработка":
                         if (user.state != User.State.main) return;
                         await Tgbot.SendTextMessageAsync(message.Chat.Id,
-                            "Выберите, что вы хотите сделать.", replyMarkup: Keys);
+                            "Выберите, что вы хотите сделать.", replyMarkup: Keyboards.Working);
                         break;
                     case "📄 Инструкция":
                         await Tgbot.SendTextMessageAsync(message.Chat.Id,
@@ -405,8 +396,20 @@ namespace Insta
                         if (user.state != User.State.main) return;
                         await Tgbot.SendTextMessageAsync(message.Chat.Id,
                             "Введите количество аккаунтов, которые хотите добавить. Цена одного аккаунта - 120 рублей/30 дней.",
-                            replyMarkup: KeyMain);
-                        user.state = User.State.entetCountToBuy;
+                            replyMarkup: Keyboards.Main);
+                        user.state = User.State.enterCountToBuy;
+                        break;
+                    case "⏱ Мои подписки":
+                        if (user.state != User.State.main) return;
+                        string subscribes = $"У вас {user.Subscribes.Count} подписки(ок).\n";
+                        int i = 0;
+                        foreach (var sub in user.Subscribes.ToList())
+                        {
+                            i++;
+                            subscribes += $"Подписка {i}. Истекает {sub.EndSubscribe.ToString("g")}\n";
+                        }
+                        await Tgbot.SendTextMessageAsync(message.Chat.Id,
+                            subscribes);
                         break;
                     default:
                         switch (user.state)
@@ -420,10 +423,10 @@ namespace Insta
                                     break;
                                 }
 
-                                user.enterData.Username = message.Text;
+                                user.EnterData.Username = message.Text;
                                 user.state = User.State.password;
                                 await Tgbot.SendTextMessageAsync(message.Chat.Id,
-                                    "Теперь введите пароль.", replyMarkup: KeyBack);
+                                    "Теперь введите пароль.", replyMarkup: Keyboards.Back);
                                 break;
                             case User.State.password:
                                 if (e.Message.Text.Length < 6)
@@ -433,21 +436,21 @@ namespace Insta
                                     return;
                                 }
 
-                                user.enterData.Password = message.Text;
-                                var login = await Operation.CheckLoginAsync(user.enterData);
+                                user.EnterData.Password = message.Text;
+                                var login = await Operation.CheckLoginAsync(user.EnterData);
                                 if (await Login(user, login))
                                 {
                                     await using DB db = new DB();
                                     db.Update(user);
-                                    db.Add(user.enterData);
-                                    user.enterData = null;
+                                    db.Add(user.EnterData);
+                                    user.EnterData = null;
                                     await db.SaveChangesAsync();
                                     user.state = User.State.main;
                                 }
 
                                 break;
-                            case User.State.twofactor:
-                                var x = await Operation.SendCodeTwoFactorAsync(user.enterData.api, message.Text);
+                            case User.State.twoFactor:
+                                var x = await Operation.SendCodeTwoFactorAsync(user.EnterData.api, message.Text);
                                 if (x == null || !x.Succeeded)
                                 {
                                     await Tgbot.SendTextMessageAsync(message.From.Id,
@@ -462,8 +465,8 @@ namespace Insta
                                     {
                                         await using DB db = new DB();
                                         db.Update(user);
-                                        db.Add(user.enterData);
-                                        user.enterData = null;
+                                        db.Add(user.EnterData);
+                                        user.EnterData = null;
                                         await db.SaveChangesAsync();
                                         await Tgbot.SendTextMessageAsync(message.From.Id,
                                             "Инстаграм успешно добавлен.");
@@ -472,7 +475,7 @@ namespace Insta
                                     }
                                     case InstaLoginTwoFactorResult.InvalidCode:
                                         await Tgbot.SendTextMessageAsync(message.From.Id,
-                                            "Неверный код, попробуйте еще раз.", replyMarkup: KeyMain);
+                                            "Неверный код, попробуйте еще раз.", replyMarkup: Keyboards.Main);
                                         break;
                                     default:
                                         await Tgbot.SendTextMessageAsync(message.From.Id,
@@ -483,37 +486,37 @@ namespace Insta
 
                                 break;
                             case User.State.challengeRequiredAccept:
-                                var y = await Operation.SendCodeChallengeRequiredAsync(user.enterData.api,
+                                var y = await Operation.SendCodeChallengeRequiredAsync(user.EnterData.api,
                                     message.Text);
                                 if (await Login(user, y))
                                 {
                                     await using DB db = new DB();
                                     db.Update(user);
-                                    db.Add(user.enterData);
-                                    user.enterData = null;
+                                    db.Add(user.EnterData);
+                                    user.EnterData = null;
                                     await db.SaveChangesAsync();
                                 }
                                 break;
                             case User.State.challengeRequiredPhoneCall:
-                                bool isRight = await Operation.SubmitPhoneChallengeRequiredAsync(user.enterData.api,
+                                bool isRight = await Operation.SubmitPhoneChallengeRequiredAsync(user.EnterData.api,
                                     message.Text);
                                 if (isRight)
                                 {
                                     user.state = User.State.challengeRequiredAccept;
                                     await Tgbot.SendTextMessageAsync(message.From.Id,
-                                        "Код отправлен. Введите код из сообщения.", replyMarkup: KeyMain);
+                                        "Код отправлен. Введите код из сообщения.", replyMarkup: Keyboards.Main);
                                 }
                                 else
                                 {
                                     await Tgbot.SendTextMessageAsync(message.From.Id,
-                                        "Ошибка. Неверный номер.", replyMarkup: KeyMain);
+                                        "Ошибка. Неверный номер.", replyMarkup: Keyboards.Main);
                                 }
                                 break;
                             case User.State.selectHashtag:
                                 user.CurrentWork?.SetHashtag(message.Text);
                                 user.state = User.State.setDuration;
                                 await Tgbot.SendTextMessageAsync(message.From.Id,
-                                    "Введите интервал (в секундах).", replyMarkup: KeyBack);
+                                    "Введите интервал (в секундах).", replyMarkup: Keyboards.Back);
                                 break;
                             case User.State.setDuration:
                                 int duration;
@@ -533,7 +536,7 @@ namespace Insta
 
                                 user.CurrentWork?.SetDuration(duration * 1000);
                                 await Tgbot.SendTextMessageAsync(message.From.Id,
-                                    "Выбирете, когда хотите начать.", replyMarkup: StartWork);
+                                    "Выбирете, когда хотите начать.", replyMarkup: Keyboards.StartWork);
                                 user.state = User.State.setTimeWork;
                                 break;
                             case User.State.setDate:
@@ -551,10 +554,7 @@ namespace Insta
                                     if (user.CurrentWork != null)
                                         await Tgbot.SendTextMessageAsync(message.From.Id,
                                             $"Отработка на аккаунте {user.CurrentWork.GetUsername()} по хештегу #{user.CurrentWork.Hashtag} начнётся в {timeEnter:HH:mm:ss}.",
-                                            replyMarkup: new InlineKeyboardMarkup(
-                                                InlineKeyboardButton.WithCallbackData("🛑 Отмена",
-                                                    $"cancel_{user.CurrentWork.Id}")));
-                                    user.CurrentWork = null;
+                                            replyMarkup: Keyboards.Cancel(user.CurrentWork.Id));
                                     user.state = User.State.main;
                                 }
                                 else
@@ -563,7 +563,7 @@ namespace Insta
                                         "Неверный формат времени.");
                                 }
                                 break;
-                            case User.State.entetCountToBuy:
+                            case User.State.enterCountToBuy:
                                 int count;
                                 if (!int.TryParse(message.Text, out count))
                                 {
@@ -591,15 +591,7 @@ namespace Insta
 
                                 await Tgbot.SendTextMessageAsync(message.From.Id,
                                     $"💸 Оплата подписки на сумму {count * 120} р.\n📆 Дата: {DateTime.Now:dd.MMM.yyyy}\n❌ Статус: Не оплачено.\n\n💳 Оплатите счет по ссылке.\n{payUrl}",
-                                    replyMarkup: new InlineKeyboardMarkup(
-                                        new List<List<InlineKeyboardButton>>()
-                                        {
-                                            new List<InlineKeyboardButton>()
-                                            {
-                                                InlineKeyboardButton.WithCallbackData("Проверить оплату",
-                                                    $"bill_{billId}")
-                                            },
-                                        }));
+                                    replyMarkup: Keyboards.CheckBill(billId));
                                 break;
                         }
                         break;
@@ -638,29 +630,27 @@ namespace Insta
                     }
                     case InstaLoginResult.BadPassword:
                         await Tgbot.SendTextMessageAsync(user.Id, "Неверный пароль. Попробуйте ввести снова.",
-                            replyMarkup: KeyBack);
+                            replyMarkup: Keyboards.Back);
                         break;
                     case InstaLoginResult.InvalidUser:
                         user.state = User.State.main;
                         await Tgbot.SendTextMessageAsync(user.Id, "Пользователь не найден. Попробуйте еще раз.",
-                            replyMarkup: new InlineKeyboardMarkup(
-                                InlineKeyboardButton.WithCallbackData("🖊 Ввести данные", "enterData")));
+                            replyMarkup: Keyboards.EnterData);
                         break;
                     case InstaLoginResult.LimitError:
                         user.state = User.State.main;
                         await Tgbot.SendTextMessageAsync(user.Id,
                             "Слишком много запросов. Подождите несколько минут и попробуйте снова.",
-                            replyMarkup: new InlineKeyboardMarkup(
-                                InlineKeyboardButton.WithCallbackData("🖊 Ввести данные", "enterData")));
+                            replyMarkup: Keyboards.EnterData);
                         break;
                     case InstaLoginResult.TwoFactorRequired:
                         await Tgbot.SendTextMessageAsync(user.Id,
-                            "Необходима двухфакторная аутентификация. Введите код из сообщения.", replyMarkup: KeyMain);
-                        user.state = User.State.twofactor;
+                            "Необходима двухфакторная аутентификация. Введите код из сообщения.", replyMarkup: Keyboards.Main);
+                        user.state = User.State.twoFactor;
                         break;
                     case InstaLoginResult.ChallengeRequired:
                     {
-                        var challenge = await user.enterData.api.GetChallengeRequireVerifyMethodAsync();
+                        var challenge = await user.EnterData.api.GetChallengeRequireVerifyMethodAsync();
                         if (!challenge.Succeeded)
                         {
                             await Tgbot.SendTextMessageAsync(user.Id,
@@ -672,38 +662,22 @@ namespace Insta
                         {
                             user.state = User.State.challengeRequiredPhoneCall;
                             await Tgbot.SendTextMessageAsync(user.Id,
-                                "Инстаграм просит подтверждение. Введите подключенный к аккаунту номер.", replyMarkup: KeyMain);
+                                "Инстаграм просит подтверждение. Введите подключенный к аккаунту номер.", replyMarkup: Keyboards.Main);
                             break;
                         }
 
                         InlineKeyboardMarkup key;
                         if (string.IsNullOrEmpty(challenge.Value.StepData.PhoneNumber))
                         {
-                            key = new InlineKeyboardMarkup(new List<List<InlineKeyboardButton>>()
-                            {
-                                new List<InlineKeyboardButton>() { InlineKeyboardButton.WithCallbackData($"✉ Эл. адресс ({challenge.Value.StepData.Email})", "challengeEmail")},
-                                new List<InlineKeyboardButton>() {InlineKeyboardButton.WithCallbackData("✅ Я подтвердил вход в инстаграме", "acceptEntry")},
-                                new List<InlineKeyboardButton>{InlineKeyboardButton.WithCallbackData("⭐ В главное меню", "mainMenu")}
-                            });
+                            key = Keyboards.Email(challenge.Value.StepData.Email);
                         }
                         else if (string.IsNullOrEmpty(challenge.Value.StepData.Email))
                         {
-                            key = new InlineKeyboardMarkup(new List<List<InlineKeyboardButton>>
-                            {
-                                new List<InlineKeyboardButton>(){InlineKeyboardButton.WithCallbackData($"📲 Телефон ({challenge.Value.StepData.PhoneNumber})", "challengePhone")},
-                                new List<InlineKeyboardButton>() {InlineKeyboardButton.WithCallbackData("✅ Я подтвердил вход в инстаграме", "acceptEntry")},
-                                new List<InlineKeyboardButton>{InlineKeyboardButton.WithCallbackData("⭐ В главное меню", "mainMenu")}
-                            });
+                            key = Keyboards.Email(challenge.Value.StepData.PhoneNumber);
                         }
                         else
                         {
-                            key = new InlineKeyboardMarkup(new List<List<InlineKeyboardButton>>()
-                            {
-                                new List<InlineKeyboardButton>() {InlineKeyboardButton.WithCallbackData($"📲 Телефон ({challenge.Value.StepData.PhoneNumber})", "challengePhone"),},
-                                new List<InlineKeyboardButton>(){InlineKeyboardButton.WithCallbackData($"✉ Эл. адресс ({challenge.Value.StepData.Email})",  "challengeEmail")},
-                                new List<InlineKeyboardButton>() {InlineKeyboardButton.WithCallbackData("✅ Я подтвердил вход в инстаграме", "acceptEntry")},
-                                new List<InlineKeyboardButton>{InlineKeyboardButton.WithCallbackData("⭐ В главное меню", "mainMenu")}
-                            });
+                            key = Keyboards.PhoneAndEmail(challenge.Value.StepData.PhoneNumber, challenge.Value.StepData.Email);
                         }
                         user.state = User.State.challengeRequired;
                         await Tgbot.SendTextMessageAsync(user.Id,
@@ -727,12 +701,12 @@ namespace Insta
             if (user == null) return;
             user.Works.Remove(user.CurrentWork);
             user.CurrentWork = null;
-            user.enterData = null;
+            user.EnterData = null;
             user.state = User.State.main;
             try
             {
                 await Tgbot.SendTextMessageAsync(user.Id,
-                    "Произошла ошибка.", replyMarkup: Keyboard);
+                    "Произошла ошибка.", replyMarkup: Keyboards.MainKeyboard);
             }
             catch
             {
