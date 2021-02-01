@@ -88,7 +88,7 @@ namespace Insta
                 IsStarted = true;
                 SendMessageStart();
                 var posts = await Api.HashtagProcessor.GetRecentHashtagMediaListAsync(Hashtag,
-                    PaginationParameters.MaxPagesToLoad(1));
+                    PaginationParameters.MaxPagesToLoad(30));
                 if (!posts.Succeeded)
                 {
                     SendMessageStop(false,message:"request failed");
