@@ -1,9 +1,11 @@
 ﻿using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using InstagramApiSharp;
 using InstagramApiSharp.API;
 using System.Timers;
+using InstagramApiSharp.Classes;
 using Telegram.Bot;
 using Timer = System.Timers.Timer;
 
@@ -14,11 +16,15 @@ namespace Insta
         public int Id { get; }
         private IInstaApi Api { get; }
         public string Hashtag { get; set; }
-        private int Duration { get; set; }
+        private int LowerDelay { get; set; }
+        private int UpperDelay { get; set; }
         private Timer Timer { get; set; }
         private User Owner { get; set; }
+
         private static readonly TelegramBotClient Tgbot =
-            new TelegramBotClient("1682222171:AAGw4CBCJ875NRn1rFnh0sBncYkev5KIa4o");
+            new TelegramBotClient("1485092461:AAGcPpPwxfSTnQ8cM3FWPFirvGIDjs84Pto");
+            //new TelegramBotClient("1682222171:AAGw4CBCJ875NRn1rFnh0sBncYkev5KIa4o");
+            private static readonly Random Rnd = new Random();
 
         private int _countLike = 0, _countSave = 0;
         public enum Mode
@@ -47,9 +53,10 @@ namespace Insta
             Hashtag = hashtag;
         }
 
-        public void SetDuration(int duration)
+        public void SetDuration(int ld,int ud)
         {
-            Duration = duration;
+            LowerDelay = ld;
+            UpperDelay = ud;
         }
 
         public string GetUsername()
@@ -80,7 +87,7 @@ namespace Insta
             Timer.Dispose();
             await Task.Run(Start);
         }
-        public bool IsStarted { get; set; }
+        public bool IsStarted { get; private set; }
         public async void Start()
         {
             try
@@ -88,51 +95,41 @@ namespace Insta
                 IsStarted = true;
                 SendMessageStart();
                 var posts = await Api.HashtagProcessor.GetRecentHashtagMediaListAsync(Hashtag,
-                    PaginationParameters.MaxPagesToLoad(30));
+                    PaginationParameters.MaxPagesToLoad(34));
                 if (!posts.Succeeded)
                 {
                     SendMessageStop(false,message:"request failed");
                     return;
                 }
-                int j=0;
-                foreach (var post in posts.Value.Medias)
+                foreach (var post in posts.Value.Medias.Where(post => !post.HasLiked))
                 {
-                    if(post.HasLiked) continue;
                     if (CancelTokenSource.IsCancellationRequested)
                     {
-                        Console.WriteLine("Post has liked");
                         SendMessageStop(true);
-                        return;
-                    }
-                    if (j > 10)
-                    {
-                        SendMessageStop(false, true,message:"limit");
                         return;
                     }
                     bool success=false;
                     switch (mode)
                     {
                         case Mode.like:
-                            success = Api.MediaProcessor.LikeMediaAsync(post.InstaIdentifier).Result.Value;
+                            success = Api.MediaProcessor.LikeMediaAsync(post.InstaIdentifier).Result.Info.ResponseType != ResponseType.Spam;
                             break;
                         case Mode.save:
-                            success=Api.MediaProcessor.SaveMediaAsync(post.InstaIdentifier).Result.Value;
+                            success=Api.MediaProcessor.SaveMediaAsync(post.InstaIdentifier).Result.Info.ResponseType!=ResponseType.Spam;
                             break;
                         case Mode.likeAndSave:
-                            success = Api.MediaProcessor.LikeMediaAsync(post.InstaIdentifier).Result.Value && Api.MediaProcessor.SaveMediaAsync(post.InstaIdentifier).Result.Value;
+                            success = Api.MediaProcessor.LikeMediaAsync(post.InstaIdentifier).Result.Info.ResponseType!=ResponseType.Spam && Api.MediaProcessor.SaveMediaAsync(post.InstaIdentifier).Result.Info.ResponseType!=ResponseType.Spam;
                             break;
                     }
                     if (!success)
                     {
-                        j++;
-                        await Task.Delay(Duration);
-                        continue;
+                        SendMessageStop(false, true,message:"limit");
+                        return;
                     }
                     _countLike++;
                     _countSave++;
-                    j = 0;
-                        //Console.WriteLine($"{GetUsername()}: #{Hashtag}");
-                    await Task.Delay(Duration);
+                    //Console.WriteLine($"{GetUsername()}: #{Hashtag}");
+                    await Task.Delay(Rnd.Next(LowerDelay, UpperDelay) * 1000);
                 }
 
                 SendMessageStop(true);
@@ -185,7 +182,7 @@ namespace Insta
                 {
                     if(limin)
                         await Tgbot.SendTextMessageAsync(Owner.Id,
-                            $"🏁 Отработка завершена с ошибкой. Аккаунт {GetUsername()}. Хештег #{Hashtag}. Скорее всего вы достигли лимита лайков / сохранений.{result}");
+                            $"🏁 Отработка завершена с ошибкой. Аккаунт {GetUsername()}. Хештег #{Hashtag}. Вы достигли лимита лайков / сохранений.{result}");
                     else
                         await Tgbot.SendTextMessageAsync(Owner.Id,
                             $"🏁 Отработка завершена с ошибкой. Аккаунт {GetUsername()}. Хештег #{Hashtag}.{result}");

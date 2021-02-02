@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using InstagramApiSharp.API;
 using InstagramApiSharp.API.Builder;
 using InstagramApiSharp.Classes;
+using InstagramApiSharp.Logger;
 using Telegram.Bot;
 
 namespace Insta
@@ -26,7 +27,6 @@ namespace Insta
                     .SetUser(userSession)
                     .Build();
                 if (instaApi.IsUserAuthenticated) return null;
-                //Console.WriteLine($"Logging in as {userSession.UserName}");
                 var logInResult = await instaApi.LoginAsync();
                 if (logInResult.Value == InstaLoginResult.Success && !logInResult.Succeeded) return null;
                 instagram.api = instaApi;

@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using InstagramApiSharp.Classes;
 using Microsoft.EntityFrameworkCore;
 using Telegram.Bot;
+using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types.ReplyMarkups;
 using Telegram.Bot.Types.InputFiles;
@@ -14,10 +15,11 @@ namespace Insta
     class Bot
     {
         private static readonly TelegramBotClient Tgbot =
-            new TelegramBotClient("1682222171:AAGw4CBCJ875NRn1rFnh0sBncYkev5KIa4o");
+            new TelegramBotClient("1485092461:AAGcPpPwxfSTnQ8cM3FWPFirvGIDjs84Pto");
+            //new TelegramBotClient("1682222171:AAGw4CBCJ875NRn1rFnh0sBncYkev5KIa4o");
 
-        public static List<User> Users;
-        private static Random rnd = new Random();
+        private static List<User> Users;
+        private static readonly Random Rnd = new Random();
         public static void Start()
         {
             using DB db = new DB();
@@ -178,7 +180,7 @@ namespace Insta
                         foreach (var x in user.Instagrams)
                         {
                             await Tgbot.SendTextMessageAsync(e.CallbackQuery.From.Id,
-                                $"{Keyboards.Emodji[rnd.Next(0, Keyboards.Emodji.Length)]} Аккаунт {x.Username}",
+                                $"{Keyboards.Emodji[Rnd.Next(0, Keyboards.Emodji.Length)]} Аккаунт {x.Username}",
                                 replyMarkup: Keyboards.Select(x.Id));
                         }
                         break;
@@ -212,7 +214,7 @@ namespace Insta
                             e.CallbackQuery.Message.MessageId);
                         user.state = User.State.setDate;
                         await Tgbot.SendTextMessageAsync(e.CallbackQuery.From.Id,
-                            "Введите время запуска по МСК в формате ЧЧ:мм. (Пример: 13:30).",replyMarkup: Keyboards.Back);
+                            "Введите время запуска по МСК в формате ЧЧ:мм. (<strong>Пример:</strong> <em>13:30</em>).",replyMarkup: Keyboards.Back,parseMode: ParseMode.Html);
                         break;
                     case "enterData":
                         if(user.state!=User.State.main) return;
@@ -305,6 +307,8 @@ namespace Insta
                             case User.State.setDate:
                                 await Tgbot.SendTextMessageAsync(e.CallbackQuery.From.Id,
                                     "Выбирете, когда хотите начать.", replyMarkup: Keyboards.StartWork);
+                                await Tgbot.DeleteMessageAsync(e.CallbackQuery.From.Id,
+                                    e.CallbackQuery.Message.MessageId);
                                 user.state = User.State.setTimeWork;
                                 break;
 
@@ -336,7 +340,7 @@ namespace Insta
             try
             {
                 var message = e.Message;
-                if (message.Type != MessageType.Text && message.Type != MessageType.Photo) return;
+                if (message.Type != MessageType.Text) return;
                 var user = Users.FirstOrDefault(x => x.Id == message.From.Id);
                 if (user == null)
                 {
@@ -365,7 +369,7 @@ namespace Insta
                         foreach (var x in user.Instagrams)
                         {
                             await Tgbot.SendTextMessageAsync(message.Chat.Id,
-                                $"{Keyboards.Emodji[rnd.Next(0, Keyboards.Emodji.Length)]} Аккаунт {x.Username}",
+                                $"{Keyboards.Emodji[Rnd.Next(0, Keyboards.Emodji.Length)]} Аккаунт {x.Username}",
                                 replyMarkup: Keyboards.Exit(x.Id));
                         }
                         if(user.Instagrams.Count<user.Subscribes.Count)
@@ -516,25 +520,42 @@ namespace Insta
                                 user.CurrentWork?.SetHashtag(message.Text);
                                 user.state = User.State.setDuration;
                                 await Tgbot.SendTextMessageAsync(message.From.Id,
-                                    "Введите интервал (в секундах).", replyMarkup: Keyboards.Back);
+                                    "Введите пределы интервала в секундах. (<strong>Пример:</strong> <em>30:120</em>).\nРекомендуемые параметры нижнего предела:\nНоввый аккаунт: <code>120 секунд.</code>\n3 - 6 месяцев: <code>90 секунд.</code>\nБольше года: <code>72 секунды.</code>\n", replyMarkup: Keyboards.Back,parseMode: ParseMode.Html);
                                 break;
                             case User.State.setDuration:
-                                int duration;
-                                if (!int.TryParse(message.Text, out duration))
+                                if(!e.Message.Text.Contains(':'))
                                 {
                                     await Tgbot.SendTextMessageAsync(message.From.Id,
-                                        "Введите число!");
+                                        "Неверный формат!");
+                                    return;
+                                }
+                                if (!int.TryParse(message.Text.Split(':')[0], out var lowerDelay))
+                                {
+                                    await Tgbot.SendTextMessageAsync(message.From.Id,
+                                        "Неверный формат!");
                                     return;
                                 }
 
-                                if (duration > 300)
+                                if (!int.TryParse(message.Text.Split(':')[1], out var upperDelay))
+                                {
+                                    await Tgbot.SendTextMessageAsync(message.From.Id,
+                                        "Неверный формат!");
+                                }
+
+                                if (upperDelay < lowerDelay)
+                                {
+                                    await Tgbot.SendTextMessageAsync(message.From.Id,
+                                        "Верхняя граница не может быть больше нижней!");
+                                    return;
+                                }
+                                if (upperDelay > 300)
                                 {
                                     await Tgbot.SendTextMessageAsync(message.From.Id,
                                         "Интервал не может быть больше 5 минут!");
                                     return;
                                 }
 
-                                user.CurrentWork?.SetDuration(duration * 1000);
+                                user.CurrentWork?.SetDuration(lowerDelay,upperDelay);
                                 await Tgbot.SendTextMessageAsync(message.From.Id,
                                     "Выбирете, когда хотите начать.", replyMarkup: Keyboards.StartWork);
                                 user.state = User.State.setTimeWork;
@@ -673,7 +694,7 @@ namespace Insta
                         }
                         else if (string.IsNullOrEmpty(challenge.Value.StepData.Email))
                         {
-                            key = Keyboards.Email(challenge.Value.StepData.PhoneNumber);
+                            key = Keyboards.Phone(challenge.Value.StepData.PhoneNumber);
                         }
                         else
                         {
