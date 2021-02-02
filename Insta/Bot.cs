@@ -5,7 +5,6 @@ using System.Threading.Tasks;
 using InstagramApiSharp.Classes;
 using Microsoft.EntityFrameworkCore;
 using Telegram.Bot;
-using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types.ReplyMarkups;
 using Telegram.Bot.Types.InputFiles;
@@ -18,14 +17,14 @@ namespace Insta
             new TelegramBotClient("1485092461:AAGcPpPwxfSTnQ8cM3FWPFirvGIDjs84Pto");
             //new TelegramBotClient("1682222171:AAGw4CBCJ875NRn1rFnh0sBncYkev5KIa4o");
 
-        private static List<User> Users;
+        private static List<User> _users;
         private static readonly Random Rnd = new Random();
         public static void Start()
         {
             using DB db = new DB();
-            Users = db.Users.Include(i => i.Instagrams).Include(i=>i.Subscribes).ToList();
+            _users = db.Users.Include(i => i.Instagrams).Include(i=>i.Subscribes).ToList();
             db.Dispose();
-            Operation.SubscribeToEvent(Users);
+            Operation.SubscribeToEvent(_users);
             Tgbot.OnMessage += Tgbot_OnMessage;
             Tgbot.OnCallbackQuery += Tgbot_OnCallbackQuery;
             Tgbot.StartReceiving();
@@ -35,7 +34,7 @@ namespace Insta
             try
             {
                 var cb = e.CallbackQuery.Data;
-                var user = Users.FirstOrDefault(x => x.Id == e.CallbackQuery.From.Id);
+                var user = _users.FirstOrDefault(x => x.Id == e.CallbackQuery.From.Id);
                 if (user == null) return;
 
                 if (cb.StartsWith("bill"))
@@ -330,7 +329,7 @@ namespace Insta
             }
             catch
             {
-                var user = Users.FirstOrDefault(x => x.Id == e.CallbackQuery.From.Id);
+                var user = _users.FirstOrDefault(x => x.Id == e.CallbackQuery.From.Id);
                 Error(user);
             }
         }
@@ -341,12 +340,12 @@ namespace Insta
             {
                 var message = e.Message;
                 if (message.Type != MessageType.Text) return;
-                var user = Users.FirstOrDefault(x => x.Id == message.From.Id);
+                var user = _users.FirstOrDefault(x => x.Id == message.From.Id);
                 if (user == null)
                 {
                     await using DB db = new DB();
                     user = new User {Id = e.Message.From.Id, state = User.State.main};
-                    Users.Add(user);
+                    _users.Add(user);
                     db.Add(user);
                     await db.SaveChangesAsync();
                     await Tgbot.SendStickerAsync(message.From.Id,
@@ -620,7 +619,7 @@ namespace Insta
             }
             catch
             {
-                var user = Users.FirstOrDefault(x => x.Id == e.Message.From.Id);
+                var user = _users.FirstOrDefault(x => x.Id == e.Message.From.Id);
                 Error(user);
             }
         }
