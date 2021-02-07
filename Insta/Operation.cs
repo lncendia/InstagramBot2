@@ -5,7 +5,6 @@ using System.Threading.Tasks;
 using InstagramApiSharp.API;
 using InstagramApiSharp.API.Builder;
 using InstagramApiSharp.Classes;
-using InstagramApiSharp.Logger;
 using Telegram.Bot;
 
 namespace Insta
@@ -71,7 +70,7 @@ namespace Insta
             return true;
         }
         private static readonly TelegramBotClient Tgbot =
-            new TelegramBotClient("1682222171:AAGw4CBCJ875NRn1rFnh0sBncYkev5KIa4o");
+            new("1682222171:AAGw4CBCJ875NRn1rFnh0sBncYkev5KIa4o");
         public static async void SubscribeToEvent(List<User> users)
         {
             await using DB db = new DB();

@@ -13,19 +13,19 @@ namespace Insta
 {
     class Bot
     {
-        private static readonly TelegramBotClient Tgbot =
-            new TelegramBotClient("1485092461:AAGcPpPwxfSTnQ8cM3FWPFirvGIDjs84Pto");
-            //new TelegramBotClient("1682222171:AAGw4CBCJ875NRn1rFnh0sBncYkev5KIa4o");
+        public static readonly TelegramBotClient Tgbot =
+            new("1682222171:AAGw4CBCJ875NRn1rFnh0sBncYkev5KIa4o");
 
-        private static List<User> _users;
-        private static readonly Random Rnd = new Random();
+        public static List<User> Users;
+        private static readonly Random Rnd = new();
         public static void Start()
         {
             using DB db = new DB();
-            _users = db.Users.Include(i => i.Instagrams).Include(i=>i.Subscribes).ToList();
+            Users = db.Users.Include(i => i.Instagrams).Include(i=>i.Subscribes).ToList();
             db.Dispose();
-            Operation.SubscribeToEvent(_users);
+            Operation.SubscribeToEvent(Users);
             Tgbot.OnMessage += Tgbot_OnMessage;
+            Tgbot.OnMessage += Admin.Admin_OnMessage;
             Tgbot.OnCallbackQuery += Tgbot_OnCallbackQuery;
             Tgbot.StartReceiving();
         }
@@ -34,7 +34,7 @@ namespace Insta
             try
             {
                 var cb = e.CallbackQuery.Data;
-                var user = _users.FirstOrDefault(x => x.Id == e.CallbackQuery.From.Id);
+                var user = Users.FirstOrDefault(x => x.Id == e.CallbackQuery.From.Id);
                 if (user == null) return;
 
                 if (cb.StartsWith("bill"))
@@ -165,6 +165,13 @@ namespace Insta
                         await Tgbot.SendTextMessageAsync(e.CallbackQuery.From.Id,
                             "Введите хештег без #.", replyMarkup: Keyboards.Main);
                         break;
+                    case "startFollowing":
+                        if(user.state!=User.State.selectMode) return;
+                        user.CurrentWork.SetMode(Work.Mode.follow);
+                        user.state = User.State.selectHashtag;
+                        await Tgbot.SendTextMessageAsync(e.CallbackQuery.From.Id,
+                            "Введите хештег без #.", replyMarkup: Keyboards.Main);
+                        break;
                     case "startAll":
                         if(user.state!=User.State.selectMode) return;
                         user.CurrentWork.SetMode(Work.Mode.likeAndSave);
@@ -242,7 +249,6 @@ namespace Insta
                             await db.SaveChangesAsync();
                             await Tgbot.DeleteMessageAsync(e.CallbackQuery.From.Id,
                                 e.CallbackQuery.Message.MessageId);
-                            user.state = User.State.main;
                         }
                         break;
                     case "challengeEmail":
@@ -329,7 +335,7 @@ namespace Insta
             }
             catch
             {
-                var user = _users.FirstOrDefault(x => x.Id == e.CallbackQuery.From.Id);
+                var user = Users.FirstOrDefault(x => x.Id == e.CallbackQuery.From.Id);
                 Error(user);
             }
         }
@@ -340,12 +346,12 @@ namespace Insta
             {
                 var message = e.Message;
                 if (message.Type != MessageType.Text) return;
-                var user = _users.FirstOrDefault(x => x.Id == message.From.Id);
+                var user = Users.FirstOrDefault(x => x.Id == message.From.Id);
                 if (user == null)
                 {
                     await using DB db = new DB();
                     user = new User {Id = e.Message.From.Id, state = User.State.main};
-                    _users.Add(user);
+                    Users.Add(user);
                     db.Add(user);
                     await db.SaveChangesAsync();
                     await Tgbot.SendStickerAsync(message.From.Id,
@@ -448,7 +454,6 @@ namespace Insta
                                     db.Add(user.EnterData);
                                     user.EnterData = null;
                                     await db.SaveChangesAsync();
-                                    user.state = User.State.main;
                                 }
 
                                 break;
@@ -619,7 +624,7 @@ namespace Insta
             }
             catch
             {
-                var user = _users.FirstOrDefault(x => x.Id == e.Message.From.Id);
+                var user = Users.FirstOrDefault(x => x.Id == e.Message.From.Id);
                 Error(user);
             }
         }
@@ -646,6 +651,7 @@ namespace Insta
                             user.state = User.State.main;
                         }
                         await Tgbot.SendTextMessageAsync(user.Id, "Инстаграм успешно добавлен.");
+                        user.state = User.State.main;
                         return true;
                     }
                     case InstaLoginResult.BadPassword:
@@ -697,7 +703,7 @@ namespace Insta
                         }
                         else
                         {
-                            key = Keyboards.PhoneAndEmail(challenge.Value.StepData.PhoneNumber, challenge.Value.StepData.Email);
+                            key = Keyboards.PhoneAndEmail(challenge.Value.StepData.Email,challenge.Value.StepData.PhoneNumber);
                         }
                         user.state = User.State.challengeRequired;
                         await Tgbot.SendTextMessageAsync(user.Id,
@@ -716,7 +722,7 @@ namespace Insta
             }
         }
 
-        private static async void Error(User user)
+        public static async void Error(User user)
         {
             if (user == null) return;
             user.Works.Remove(user.CurrentWork);

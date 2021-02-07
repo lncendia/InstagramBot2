@@ -8,9 +8,9 @@ namespace Insta
     {
         [Key, DatabaseGenerated(DatabaseGeneratedOption.None)]
         public long Id { get; set; }
-        public List<Instagram> Instagrams { get; set; } = new List<Instagram>();
-        public List<Subscribe> Subscribes { get; set; } = new List<Subscribe>();
-        [NotMapped] public List<Work> Works { get; set; } = new List<Work>();
+        public List<Instagram> Instagrams { get; set; } = new();
+        public List<Subscribe> Subscribes { get; set; } = new();
+        [NotMapped] public List<Work> Works { get; set; } = new();
         public Work CurrentWork;
         public Instagram EnterData;
 
@@ -29,7 +29,9 @@ namespace Insta
             setTimeWork,
             setDate,
             enterCountToBuy,
-            block
+            block,
+            mailingAdmin
+            
         }
 
         public State state;
