@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using InstagramApiSharp.API;
 using InstagramApiSharp.API.Builder;
 using InstagramApiSharp.Classes;
+using InstagramApiSharp.Logger;
 using Telegram.Bot;
 
 namespace Insta

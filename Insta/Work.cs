@@ -20,8 +20,9 @@ namespace Insta
         private Timer Timer { get; set; }
         private User Owner { get; }
 
-        private static readonly TelegramBotClient Tgbot = 
-            new("1682222171:AAGw4CBCJ875NRn1rFnh0sBncYkev5KIa4o");
+        private static readonly TelegramBotClient Tgbot =
+            new("1485092461:AAGcPpPwxfSTnQ8cM3FWPFirvGIDjs84Pto");
+            //new("1682222171:AAGw4CBCJ875NRn1rFnh0sBncYkev5KIa4o");
             private static readonly Random Rnd = new();
 
             private int _countLike = 0, _countSave = 0, _countFollow = 0;
@@ -93,12 +94,13 @@ namespace Insta
                 IsStarted = true;
                 SendMessageStart();
                 var posts = await Api.HashtagProcessor.GetRecentHashtagMediaListAsync(Hashtag,
-                    PaginationParameters.MaxPagesToLoad(10));
+                    PaginationParameters.MaxPagesToLoad(1));
                 if (!posts.Succeeded)
                 {
                     SendMessageStop(false,message:"request failed");
                     return;
                 }
+                
                 foreach (var post in posts.Value.Medias)
                 {
                     if (CancelTokenSource.IsCancellationRequested)

@@ -8,7 +8,7 @@ namespace Insta
         public static readonly ReplyKeyboardMarkup MainKeyboard = new(new List<List<KeyboardButton>>
         {
             new() {new KeyboardButton("🌇 Мои аккаунты"), new KeyboardButton("❤ Отработка")},
-            new() {new KeyboardButton("💰 Оплатить подписку"),new KeyboardButton("⏱ Мои подписки")},
+            new() {new KeyboardButton("💰 Оплатить подписку"), new KeyboardButton("⏱ Мои подписки")},
             new() {new KeyboardButton("📄 Инструкция"), new KeyboardButton("🤝 Поддержка")}
         });
 
@@ -31,11 +31,16 @@ namespace Insta
         public static readonly InlineKeyboardMarkup SelectMode = new(
             new List<List<InlineKeyboardButton>>
             {
-                new() {InlineKeyboardButton.WithCallbackData("❤ Лайки", "startLike"),InlineKeyboardButton.WithCallbackData("💾 Сохранения", "startSave")},
-                new() {InlineKeyboardButton.WithCallbackData("☑ Лайки + сохранения", "startAll")}, 
+                new()
+                {
+                    InlineKeyboardButton.WithCallbackData("❤ Лайки", "startLike"),
+                    InlineKeyboardButton.WithCallbackData("💾 Сохранения", "startSave")
+                },
+                new() {InlineKeyboardButton.WithCallbackData("☑ Лайки + сохранения", "startAll")},
                 new() {InlineKeyboardButton.WithCallbackData("➕ Подписки", "startFollowing")},
                 new() {InlineKeyboardButton.WithCallbackData("⭐ В главное меню", "mainMenu")}
             });
+
         public static readonly InlineKeyboardMarkup StartWork = new(
             new List<List<InlineKeyboardButton>>
             {
@@ -50,9 +55,17 @@ namespace Insta
 
         public static InlineKeyboardMarkup Select(long id)
         {
-            return new(InlineKeyboardButton.WithCallbackData("Выбрать", $"select_{id}"));
+            return new(InlineKeyboardButton.WithCallbackData("➕", $"select_{id}"));
         }
 
+        public static readonly InlineKeyboardMarkup SelectAll =
+            new(new List<List<InlineKeyboardButton>>
+            {
+                new() {InlineKeyboardButton.WithCallbackData("🗒 Выбрать все аккаунты", "selectAll")},
+                new() {InlineKeyboardButton.WithCallbackData("🛑 Отмена", "mainMenu")}
+            });
+
+        public static readonly ReplyKeyboardMarkup EndSelection = new(new KeyboardButton("➡ Продолжить"));
         public static readonly InlineKeyboardMarkup EnterData = new(
             InlineKeyboardButton.WithCallbackData("🖊 Ввести данные", "enterData"));
 

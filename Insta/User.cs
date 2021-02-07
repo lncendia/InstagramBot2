@@ -11,7 +11,7 @@ namespace Insta
         public List<Instagram> Instagrams { get; set; } = new();
         public List<Subscribe> Subscribes { get; set; } = new();
         [NotMapped] public List<Work> Works { get; set; } = new();
-        public Work CurrentWork;
+        public readonly List<Work> CurrentWorks = new();
         public Instagram EnterData;
 
         public enum State
@@ -23,6 +23,7 @@ namespace Insta
             challengeRequired,
             challengeRequiredAccept,
             challengeRequiredPhoneCall,
+            selectAccounts,
             selectMode,
             selectHashtag,
             setDuration,
