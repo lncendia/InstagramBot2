@@ -4,6 +4,8 @@ namespace Insta
 {
     internal static class Program
     {
+        public const string Token = "1682222171:AAGw4CBCJ875NRn1rFnh0sBncYkev5KIa4o";
+
         static void Main(string[] args)
         {
             Bot.Start();

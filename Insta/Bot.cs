@@ -14,7 +14,7 @@ namespace Insta
     class Bot
     {
         public static readonly TelegramBotClient Tgbot = 
-            new("1682222171:AAGw4CBCJ875NRn1rFnh0sBncYkev5KIa4o");
+            new(Program.Token);
 
         public static List<User> Users;
         public static readonly Random Rnd = new();

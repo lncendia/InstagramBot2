@@ -22,7 +22,7 @@ namespace Insta
         private User Owner { get; }
 
         private static readonly TelegramBotClient Tgbot = 
-            new("1682222171:AAGw4CBCJ875NRn1rFnh0sBncYkev5KIa4o");
+            new(Program.Token);
             private static readonly Random Rnd = new();
 
             private int _countLike, _countSave, _countFollow;
@@ -94,10 +94,10 @@ namespace Insta
                 IsStarted = true;
                 SendMessageStart();
                 var posts = await Api.HashtagProcessor.GetRecentHashtagMediaListAsync(Hashtag,
-                    PaginationParameters.MaxPagesToLoad(1));
+                    PaginationParameters.MaxPagesToLoad(33));
                 if (posts.Info.ResponseType == ResponseType.LoginRequired)
                 {
-                    SendMessageStop(false,message:"request failed", needLeave:true);
+                    SendMessageStop(false,message:"logOut", needLeave:true);
                     return;
                 }
                 if (!posts.Succeeded)
@@ -195,7 +195,6 @@ namespace Insta
                         return;
                     }
                     
-                    Console.WriteLine($"{GetUsername()}: #{Hashtag}");
                     await Task.Delay(Rnd.Next(LowerDelay, UpperDelay) * 1000);
                 }
 
@@ -211,6 +210,7 @@ namespace Insta
         {
             try
             {
+                Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] Отработка запущена у {Owner.Id}.\nАккаунт: {GetUsername()}\nХештег: #{Hashtag}\n");
                 await Tgbot.SendTextMessageAsync(Owner.Id,
                     $"Отработка запущена. Аккаунт {GetUsername()}. Хештег #{Hashtag}.",
                     replyMarkup: Keyboards.Cancel(Id));
@@ -226,7 +226,6 @@ namespace Insta
             try
             {
                 Owner.Works.Remove(this);
-                if(message!="")Console.WriteLine($"У {GetUsername()} ошибка. {message}");
                 string result=String.Empty;
                 switch (mode)
                 {
@@ -245,11 +244,13 @@ namespace Insta
                 }
                 if (finished)
                 {
+                    Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] Отработка завершена у {Owner.Id}.\nИнстаграм: {GetUsername()}\nХештег: #{Hashtag}{result}\n");
                     await Tgbot.SendTextMessageAsync(Owner.Id, 
                         $"🏁 Отработка завершена успешно. Аккаунт {GetUsername()}. Хештег #{Hashtag}.{result}");
                 }
                 else
                 {
+                    Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] Отработка завершена у {Owner.Id} c ошибкой: {message}.\nИнстаграм: {GetUsername()}\nХештег: #{Hashtag}{result}\n");
                     if(limit)
                         await Tgbot.SendTextMessageAsync(Owner.Id,
                             $"🏁 Отработка завершена с ошибкой. Аккаунт {GetUsername()}. Хештег #{Hashtag}. Вы достигли ограничения.{result}");
