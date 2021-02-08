@@ -93,19 +93,10 @@ namespace Insta
         public static InlineKeyboardMarkup CheckBill(string id)
         {
             return new(
-                new List<List<InlineKeyboardButton>>()
-                {
-                    new()
-                    {
-                        InlineKeyboardButton.WithCallbackData("Проверить оплату",
-                            $"bill_{id}")
-                    },
-                    new()
-                    {
-                        InlineKeyboardButton.WithCallbackData("⭐ В главное меню", "mainMenu")
-                    }
-                });
+                InlineKeyboardButton.WithCallbackData("Проверить оплату",
+                    $"bill_{id}"));
         }
+
         public static InlineKeyboardMarkup Email(string email)
         {
             return new(new List<List<InlineKeyboardButton>>()

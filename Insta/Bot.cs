@@ -280,7 +280,6 @@ namespace Insta
                         break;
                     case "selectMode":
                         if (user.state != User.State.selectAccounts) return;
-                        await Tgbot.DeleteMessageAsync(e.CallbackQuery.From.Id, e.CallbackQuery.Message.MessageId);
                         if (user.CurrentWorks.Count == 0)
                         {
                             await Tgbot.AnswerCallbackQueryAsync(e.CallbackQuery.Id,
@@ -288,6 +287,7 @@ namespace Insta
                             return;
                         }
                         user.state = User.State.selectMode;
+                        await Tgbot.DeleteMessageAsync(e.CallbackQuery.From.Id, e.CallbackQuery.Message.MessageId);
                         await Tgbot.SendTextMessageAsync(e.CallbackQuery.From.Id,
                             "Выберите режим.", replyMarkup: Keyboards.SelectMode);
                         break;
@@ -355,7 +355,7 @@ namespace Insta
                     case "acceptEntry":
                         if(user.state!=User.State.challengeRequired) return;
                         login = await Operation.CheckLoginAsync(user.EnterData);
-                        if (await Login(user, login))
+                        if (login?.Value == InstaLoginResult.Success)
                         {
                             await using DB db = new DB();
                             db.Update(user);
@@ -364,6 +364,11 @@ namespace Insta
                             await db.SaveChangesAsync();
                             await Tgbot.DeleteMessageAsync(e.CallbackQuery.From.Id,
                                 e.CallbackQuery.Message.MessageId);
+                        }
+                        else
+                        {
+                            await Tgbot.AnswerCallbackQueryAsync(e.CallbackQuery.Id,
+                                "Произошла ошибка, попробуйте еще раз.");
                         }
                         break;
                     case "challengeEmail":
@@ -483,8 +488,15 @@ namespace Insta
                 switch (message.Text)
                 {
                     case "/start":
-                        if (user.state != User.State.main) break;
-                        await Tgbot.SendTextMessageAsync(message.Chat.Id,
+                        if(user.state == User.State.block) return;
+                        foreach (var work in user.CurrentWorks)
+                        {
+                            user.Works.Remove(work);
+                        }
+                        user.CurrentWorks.Clear();
+                        user.EnterData = null;
+                        user.state = User.State.main;
+                        await Tgbot.SendTextMessageAsync(message.From.Id,
                             "Вы в главном меню.", replyMarkup: Keyboards.MainKeyboard);
                         break;
                     case "🌇 Мои аккаунты":
