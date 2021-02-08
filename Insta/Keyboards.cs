@@ -1,4 +1,6 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
+using Telegram.Bot.Types;
 using Telegram.Bot.Types.ReplyMarkups;
 
 namespace Insta
@@ -53,19 +55,28 @@ namespace Insta
             });
 
 
-        public static InlineKeyboardMarkup Select(long id)
+        public static InlineKeyboardMarkup Select(User user)
         {
-            return new(InlineKeyboardButton.WithCallbackData("➕", $"select_{id}"));
+            List<List<InlineKeyboardButton>> accounts = user.Instagrams.Select(inst => new List<InlineKeyboardButton>() {InlineKeyboardButton.WithCallbackData($"{Emodji[Bot.Rnd.Next(0, Emodji.Length)]} {inst.Username}", $"select_{inst.Id}")}).ToList();
+
+            accounts.Add(new List<InlineKeyboardButton>() {InlineKeyboardButton.WithCallbackData("🗒 Выбрать все аккаунты", "selectAll")});
+            accounts.Add(new List<InlineKeyboardButton>() {InlineKeyboardButton.WithCallbackData("👈 Выбрать режим", "selectMode"),InlineKeyboardButton.WithCallbackData("⭐ В главное меню", "mainMenu")});
+
+            return new InlineKeyboardMarkup(accounts);
         }
 
-        public static readonly InlineKeyboardMarkup SelectAll =
-            new(new List<List<InlineKeyboardButton>>
+        public static InlineKeyboardMarkup NewSelect(List<IEnumerable<InlineKeyboardButton>> keyboard,
+            CallbackQuery query)
+        {
+            keyboard.Remove(keyboard.FirstOrDefault(_ => _.FirstOrDefault()?.CallbackData == query.Data));
+            if (keyboard.Count == 2)
             {
-                new() {InlineKeyboardButton.WithCallbackData("🗒 Выбрать все аккаунты", "selectAll")},
-                new() {InlineKeyboardButton.WithCallbackData("🛑 Отмена", "mainMenu")}
-            });
+                keyboard.Remove(keyboard.FirstOrDefault(_ => _.FirstOrDefault()?.CallbackData == "selectAll"));
+            }
 
-        public static readonly ReplyKeyboardMarkup EndSelection = new(new KeyboardButton("➡ Продолжить"));
+            return new InlineKeyboardMarkup(keyboard);
+        }
+
         public static readonly InlineKeyboardMarkup EnterData = new(
             InlineKeyboardButton.WithCallbackData("🖊 Ввести данные", "enterData"));
 
