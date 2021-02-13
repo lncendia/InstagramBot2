@@ -1,11 +1,11 @@
 ﻿using System;
 using System.Linq;
+using Insta.Entities;
 using Qiwi.BillPayments.Client;
 using Qiwi.BillPayments.Model;
 using Qiwi.BillPayments.Model.In;
-using Telegram.Bot;
 
-namespace Insta
+namespace Insta.Payments
 {
     internal static class Payment
     {
@@ -42,7 +42,7 @@ namespace Insta
         {
             try
             {
-                using var db = new DB();
+                using var db = new Db();
                 var response = Client.GetBillInfo(billId);
                 if (response.Status.ValueEnum != BillStatusEnum.Paid) return false;
                 db.Update(user);
@@ -50,7 +50,7 @@ namespace Insta
                 db.SaveChanges();
                 for (var i = (int) response.Amount.ValueDecimal / 120; i > 0; i--)
                 {
-                    db.Add(new Subscribe() {User = user});
+                    db.Add(new Subscribe {User = user});
                     var inst = user.Instagrams.ToList().FirstOrDefault(x => x.IsDeactivated);
                     if (inst == null) continue;
                     inst.IsDeactivated = false;

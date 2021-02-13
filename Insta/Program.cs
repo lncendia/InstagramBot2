@@ -1,4 +1,6 @@
 ﻿using System;
+using Insta.Bot;
+using System.IO;
 
 namespace Insta
 {
@@ -8,9 +10,31 @@ namespace Insta
 
         static void Main(string[] args)
         {
-            Bot.Start();
-            Console.WriteLine("The bot has started, press any button to turn it off.");
-            Console.ReadKey();
+            MainBot.Start();
+            Console.WriteLine("The bot has started. Enter \"1\" to load proxy.");
+            while (true)
+            {
+                try
+                {
+                    var key = Console.ReadKey();
+                    if (key.KeyChar != '1') continue;
+                    Console.WriteLine("\nJust drag and drop the file to the console.");
+                    var path = Console.ReadLine();
+                    if (path == null) return;
+                    var proxy = File.ReadAllLines(path);
+                    foreach (var p in proxy)
+                    {
+                        string successful = Working.Operation.AddProxy(p)
+                            ? $"{p} загружена успешно."
+                            : $"{p} не загружена.";
+                        Console.WriteLine(successful);
+                    }
+                }
+                catch
+                {
+                    // ignored
+                }
+            }
         }
     }
 }

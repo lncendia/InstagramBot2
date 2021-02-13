@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Insta
+namespace Insta.Entities
 {
     public class Subscribe
     {

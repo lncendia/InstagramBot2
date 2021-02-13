@@ -3,8 +3,9 @@ using Telegram.Bot.Args;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types.ReplyMarkups;
+using User = Insta.Entities.User;
 
-namespace Insta
+namespace Insta.Bot
 {
     public static class Admin
     {
@@ -13,18 +14,18 @@ namespace Insta
             try
             {
                 if (e.Message.From.Id != 346978522 && e.Message.From.Id != 921976182) return;
-                User user = Bot.Users.ToList().FirstOrDefault(x => x.Id == e.Message.From.Id);
+                User user = MainBot.Users.ToList().FirstOrDefault(x => x.Id == e.Message.From.Id);
                 if (user == null) return;
                 if (user.state == User.State.mailingAdmin &&e.Message.Text!="/mailing")
                 {
                     switch (e.Message.Type)
                     {
                         case MessageType.Text:
-                            foreach (var member in Bot.Users.ToList())
+                            foreach (var member in MainBot.Users.ToList())
                             {
                                 try
                                 {
-                                    await Bot.Tgbot.SendTextMessageAsync(member.Id, e.Message.Text);
+                                    await MainBot.Tgbot.SendTextMessageAsync(member.Id, e.Message.Text);
                                 }
                                 catch
                                 {
@@ -34,11 +35,11 @@ namespace Insta
 
                             break;
                         case MessageType.Photo:
-                            foreach (var member in Bot.Users.ToList())
+                            foreach (var member in MainBot.Users.ToList())
                             {
                                 try
                                 {
-                                    await Bot.Tgbot.SendPhotoAsync(member.Id,
+                                    await MainBot.Tgbot.SendPhotoAsync(member.Id,
                                         new InputMedia(e.Message.Photo.Last().FileId), caption: e.Message.Caption);
                                 }
                                 catch
@@ -49,11 +50,11 @@ namespace Insta
 
                             break;
                         case MessageType.Audio:
-                            foreach (var member in Bot.Users.ToList())
+                            foreach (var member in MainBot.Users.ToList())
                             {
                                 try
                                 {
-                                    await Bot.Tgbot.SendAudioAsync(member.Id, new InputMedia(e.Message.Audio.FileId));
+                                    await MainBot.Tgbot.SendAudioAsync(member.Id, new InputMedia(e.Message.Audio.FileId));
                                 }
                                 catch
                                 {
@@ -63,11 +64,11 @@ namespace Insta
 
                             break;
                         case MessageType.Video:
-                            foreach (var member in Bot.Users.ToList())
+                            foreach (var member in MainBot.Users.ToList())
                             {
                                 try
                                 {
-                                    await Bot.Tgbot.SendVideoAsync(member.Id, new InputMedia(e.Message.Video.FileId),
+                                    await MainBot.Tgbot.SendVideoAsync(member.Id, new InputMedia(e.Message.Video.FileId),
                                         caption: e.Message.Caption);
                                 }
                                 catch
@@ -78,11 +79,11 @@ namespace Insta
 
                             break;
                         case MessageType.Voice:
-                            foreach (var member in Bot.Users.ToList())
+                            foreach (var member in MainBot.Users.ToList())
                             {
                                 try
                                 {
-                                    await Bot.Tgbot.SendVoiceAsync(member.Id, new InputMedia(e.Message.Voice.FileId));
+                                    await MainBot.Tgbot.SendVoiceAsync(member.Id, new InputMedia(e.Message.Voice.FileId));
                                 }
                                 catch
                                 {
@@ -92,11 +93,11 @@ namespace Insta
 
                             break;
                         case MessageType.Document:
-                            foreach (var member in Bot.Users.ToList())
+                            foreach (var member in MainBot.Users.ToList())
                             {
                                 try
                                 {
-                                    await Bot.Tgbot.SendPhotoAsync(member.Id,
+                                    await MainBot.Tgbot.SendPhotoAsync(member.Id,
                                         new InputMedia(e.Message.Document.FileId));
                                 }
                                 catch
@@ -107,11 +108,11 @@ namespace Insta
 
                             break;
                         case MessageType.Sticker:
-                            foreach (var member in Bot.Users.ToList())
+                            foreach (var member in MainBot.Users.ToList())
                             {
                                 try
                                 {
-                                    await Bot.Tgbot.SendPhotoAsync(member.Id, new InputMedia(e.Message.Sticker.FileId));
+                                    await MainBot.Tgbot.SendPhotoAsync(member.Id, new InputMedia(e.Message.Sticker.FileId));
                                 }
                                 catch
                                 {
@@ -121,7 +122,7 @@ namespace Insta
 
                             break;
                     }
-                    await Bot.Tgbot.SendTextMessageAsync(user.Id, "Сообщение было успешно отправлено.",
+                    await MainBot.Tgbot.SendTextMessageAsync(user.Id, "Сообщение было успешно отправлено.",
                         replyMarkup: Keyboards.MainKeyboard);
                     user.state = User.State.main;
                     return;
@@ -133,15 +134,15 @@ namespace Insta
                     case "/mailing":
                         if (user.state == User.State.main)
                         {
-                            await Bot.Tgbot.SendTextMessageAsync(user.Id, "Добро пожаловать в панель рассылки.",
+                            await MainBot.Tgbot.SendTextMessageAsync(user.Id, "Добро пожаловать в панель рассылки.",
                                 replyMarkup: new ReplyKeyboardRemove());
-                            await Bot.Tgbot.SendTextMessageAsync(user.Id, "Введите сообщение, которое хотите разослать.",
+                            await MainBot.Tgbot.SendTextMessageAsync(user.Id, "Введите сообщение, которое хотите разослать.",
                                 replyMarkup: Keyboards.Main);
                             user.state = User.State.mailingAdmin;
                         }
                         else
                         {
-                            await Bot.Tgbot.SendTextMessageAsync(user.Id, "Вы вышли из панели рассылки.",
+                            await MainBot.Tgbot.SendTextMessageAsync(user.Id, "Вы вышли из панели рассылки.",
                                 replyMarkup: Keyboards.MainKeyboard);
                             user.state = User.State.main;
                         }
@@ -151,8 +152,8 @@ namespace Insta
             }
             catch
             {
-                var user = Bot.Users.FirstOrDefault(x => x.Id == e.Message.From.Id);
-                Bot.Error(user);
+                var user = MainBot.Users.FirstOrDefault(x => x.Id == e.Message.From.Id);
+                MainBot.Error(user);
             }
         }
     }

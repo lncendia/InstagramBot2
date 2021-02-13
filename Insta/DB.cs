@@ -1,18 +1,20 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using Insta.Entities;
 using Microsoft.EntityFrameworkCore;
 
 namespace Insta
 {
-    sealed class DB:DbContext
+    internal sealed class Db:DbContext
     {
         public DbSet<User> Users { get; set; }
         public DbSet<Instagram> Instagrams { get; set; }
         public DbSet<Subscribe> Subscribes { get; set; }
         public DbSet<Transaction> Transactions { get; set; }
+        public DbSet<Proxy> Proxies { get; set; }
 
-        public DB()
+        public Db()
         {
             Database.EnsureCreated();
         }

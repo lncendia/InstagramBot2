@@ -1,9 +1,11 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using Insta.Entities;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.ReplyMarkups;
+using User = Insta.Entities.User;
 
-namespace Insta
+namespace Insta.Bot
 {
     public static class Keyboards
     {
@@ -57,7 +59,7 @@ namespace Insta
 
         public static InlineKeyboardMarkup Select(User user)
         {
-            List<List<InlineKeyboardButton>> accounts = user.Instagrams.Select(inst => new List<InlineKeyboardButton>() {InlineKeyboardButton.WithCallbackData($"{Emodji[Bot.Rnd.Next(0, Emodji.Length)]} {inst.Username}", $"select_{inst.Id}")}).ToList();
+            List<List<InlineKeyboardButton>> accounts = user.Instagrams.Select(inst => new List<InlineKeyboardButton>() {InlineKeyboardButton.WithCallbackData($"{Emodji[MainBot.Rnd.Next(0, Emodji.Length)]} {inst.Username}", $"select_{inst.Id}")}).ToList();
 
             accounts.Add(new List<InlineKeyboardButton>() {InlineKeyboardButton.WithCallbackData("🗒 Выбрать все аккаунты", "selectAll")});
             accounts.Add(new List<InlineKeyboardButton>() {InlineKeyboardButton.WithCallbackData("👈 Выбрать режим", "selectMode"),InlineKeyboardButton.WithCallbackData("⭐ В главное меню", "mainMenu")});
@@ -80,6 +82,23 @@ namespace Insta
         public static readonly InlineKeyboardMarkup EnterData = new(
             InlineKeyboardButton.WithCallbackData("🖊 Ввести данные", "enterData"));
 
+        public static InlineKeyboardMarkup ChangeProxy(Instagram instagram)
+        {
+            if (instagram == null) return null;
+            return new InlineKeyboardMarkup(
+                InlineKeyboardButton.WithCallbackData("♻ Сменить прокси", $"changeProxy_{instagram.Id}"));
+        }
+
+        public static InlineKeyboardMarkup ChangeProxyAndExit(Instagram instagram)
+        {
+            if (instagram == null) return null;
+            return new InlineKeyboardMarkup(new List<InlineKeyboardButton>
+            {
+                InlineKeyboardButton.WithCallbackData("♻ Сменить прокси", $"changeProxy_{instagram.Id}"),
+                InlineKeyboardButton.WithCallbackData("🚪 Выйти", $"exit_{instagram.Id}")
+            });
+        }
+
         public static InlineKeyboardMarkup Cancel(long id)
         {
             return new(InlineKeyboardButton.WithCallbackData("🛑 Отменить", $"cancel_{id}"));
@@ -87,7 +106,11 @@ namespace Insta
 
         public static InlineKeyboardMarkup Exit(long id)
         {
-            return new(InlineKeyboardButton.WithCallbackData("🚪 Выйти", $"exit_{id}"));
+            return new(new List<InlineKeyboardButton>
+            {
+                InlineKeyboardButton.WithCallbackData("🚪 Выйти", $"exit_{id}"),
+                InlineKeyboardButton.WithCallbackData("♻ Перезайти", $"reLogIn_{id}")
+            });
         }
 
         public static InlineKeyboardMarkup CheckBill(string id)
