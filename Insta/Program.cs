@@ -1,6 +1,7 @@
 ﻿using System;
 using Insta.Bot;
 using System.IO;
+using System.Threading.Tasks;
 
 namespace Insta
 {
@@ -8,9 +9,9 @@ namespace Insta
     {
         public const string Token = "1682222171:AAGw4CBCJ875NRn1rFnh0sBncYkev5KIa4o";
 
-        static void Main(string[] args)
+        static async Task Main(string[] args)
         {
-            MainBot.Start();
+            await MainBot.Start();
             Console.WriteLine("The bot has started. Enter \"1\" to load proxy.");
             while (true)
             {
@@ -21,7 +22,7 @@ namespace Insta
                     Console.WriteLine("\nJust drag and drop the file to the console.");
                     var path = Console.ReadLine();
                     if (path == null) return;
-                    var proxy = File.ReadAllLines(path);
+                    var proxy = await File.ReadAllLinesAsync(path);
                     foreach (var p in proxy)
                     {
                         string successful = Working.Operation.AddProxy(p)

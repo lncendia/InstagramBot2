@@ -8,7 +8,6 @@ using Insta.Entities;
 using InstagramApiSharp.API;
 using InstagramApiSharp.API.Builder;
 using InstagramApiSharp.Classes;
-using InstagramApiSharp.Logger;
 using Telegram.Bot;
 
 namespace Insta.Working
@@ -161,7 +160,7 @@ namespace Insta.Working
 
         }
 
-        private static async Task<bool> LoadFromStateData(Instagram instagram)
+        private static async Task LoadFromStateData(Instagram instagram)
         {
             try
             {
@@ -170,16 +169,14 @@ namespace Insta.Working
                     .Build();
                 await instaApi.LoadStateDataFromStringAsync(instagram.StateData);
                 instagram.Api = instaApi;
-                return true;
             }
             catch
             {
-                return false;
+                // ignored
             }
-
         }
 
-        public static async void LoadUsersStateData(List<Instagram> instagrams)
+        public static async Task LoadUsersStateData(List<Instagram> instagrams)
         {
             foreach (var instagram in instagrams)
             {
@@ -223,7 +220,7 @@ namespace Insta.Working
         }
         private static readonly TelegramBotClient Tgbot =
             new("1682222171:AAGw4CBCJ875NRn1rFnh0sBncYkev5KIa4o");
-        public static async void SubscribeToEvent(List<User> users)
+        public static async void CheckSubscribe(List<User> users)
         {
             await using Db db = new Db();
             foreach (var user in users)
@@ -266,6 +263,42 @@ namespace Insta.Working
             }
             await db.SaveChangesAsync();
             await Task.Delay(new TimeSpan(1, 0, 0, 0));
+        }
+
+        public static async Task LoadWorks(List<WorkTask> worksList)
+        {
+            try
+            {
+                await using Db db = new Db();
+                foreach (var work in worksList)
+                {
+                    try
+                    {
+                        if (work.StartTime.CompareTo(DateTime.Now) <= 0 || work.Instagram.IsDeactivated)
+                        {
+                            db.Update(work);
+                            db.Remove(work);
+                            await db.SaveChangesAsync();
+                            continue;
+                        }
+
+                        User user = work.Instagram.User;
+                        Work workUser = new Work(user.Works.Count, work.Instagram, user);
+                        workUser.SetHashtag(work.Hashtag);
+                        workUser.SetDuration(work.LowerDelay, work.UpperDelay);
+                        workUser.SetMode(work.Mode);
+                        await workUser.StartAtTime(work.StartTime, work);
+                    }
+                    catch
+                    {
+                        // ignored
+                    }
+                }
+            }
+            catch
+            {
+                // ignored
+            }
         }
     }
 }

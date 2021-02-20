@@ -12,6 +12,7 @@ namespace Insta
         public DbSet<Instagram> Instagrams { get; set; }
         public DbSet<Subscribe> Subscribes { get; set; }
         public DbSet<Transaction> Transactions { get; set; }
+        public DbSet<WorkTask> Works { get; set; }
         public DbSet<Proxy> Proxies { get; set; }
 
         public Db()

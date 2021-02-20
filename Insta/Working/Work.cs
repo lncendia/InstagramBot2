@@ -74,13 +74,44 @@ namespace Insta.Working
             UpperDelay = ud;
         }
 
-        public void StartAtTime(TimeSpan time)
+        public async Task StartAtTime(DateTime time)
         {
-            Timer = new Timer(time.TotalMilliseconds) {Enabled = true};
-            Timer.Elapsed += Timer_Elapsed;
+            try
+            {
+                Timer = new Timer(time.Subtract(DateTime.Now).TotalMilliseconds) {Enabled = true};
+                Timer.Elapsed += Timer_Elapsed;
+                await using Db db = new Db();
+                _works = new WorkTask
+                {
+                    Hashtag = Hashtag, Instagram = Instagram, LowerDelay = LowerDelay, UpperDelay = UpperDelay,
+                    StartTime = time
+                };
+                db.Update(Instagram);
+                db.Add(_works);
+                await db.SaveChangesAsync();
+            }
+            catch (Exception ex)
+            {
+                await SendMessageStop(Stop.anotherError, message:ex.Message);
+            }
+            
+        }
+        public async Task StartAtTime(DateTime time, WorkTask task)
+        {
+            try
+            {
+                Timer = new Timer(time.Subtract(DateTime.Now).TotalMilliseconds) {Enabled = true};
+                Timer.Elapsed += Timer_Elapsed;
+                _works = task;
+            }
+            catch (Exception ex)
+            {
+                await SendMessageStop(Stop.anotherError, message: ex.Message);
+            }
         }
 
-        public async void TimerDispose()
+        private WorkTask _works;
+        public async Task TimerDispose()
         {
             try
             {
@@ -114,7 +145,7 @@ namespace Insta.Working
                 }
                 SendMessageStart();
                 var posts = await Instagram.Api.HashtagProcessor.GetRecentHashtagMediaListAsync(Hashtag,
-                    PaginationParameters.MaxPagesToLoad(1));
+                    PaginationParameters.MaxPagesToLoad(34));
                 if (posts.Info.ResponseType == ResponseType.LoginRequired)
                 {
                     await SendMessageStop(Stop.logOut, message: "logOut");
@@ -230,6 +261,7 @@ namespace Insta.Working
                     case ResponseType.NetworkProblem:
                         if (result.Exception is HttpRequestException)
                         {
+                            Operation.CheckProxy(Instagram.Proxy);
                             await SendMessageStop(Stop.proxyError, "Ошибка прокси");
                         }
                         else
@@ -290,7 +322,7 @@ namespace Insta.Working
 
                 var log = stop == Stop.ok
                     ? $"[{DateTime.Now:HH:mm:ss}] Отработка завершена у {Owner.Id}.\nИнстаграм: {Instagram.Username}\nХештег: #{Hashtag}{result}\n"
-                    : $"[{DateTime.Now:HH:mm:ss}] Отработка завершена у {Owner.Id} c ошибкой: {message}.\nИнстаграм: {Instagram.Username}\nХештег: #{Hashtag}{result}\n";
+                    : $"[{DateTime.Now:HH:mm:ss}] Отработка завершена у {Owner.Id} c ошибкой: {message}\n[{Instagram.Proxy.Id}] {Instagram.Proxy.Host}:{Instagram.Proxy.Port}.\nИнстаграм: {Instagram.Username}\nХештег: #{Hashtag}{result}\n";
                 Console.WriteLine(log);
                 switch (stop)
                 {
@@ -324,6 +356,14 @@ namespace Insta.Working
                         await Tgbot.SendTextMessageAsync(Owner.Id,
                             $"🏁 Отработка завершена с ошибкой ({message}). Аккаунт {Instagram.Username}. Хештег #{Hashtag}.{result}");
                         break;
+                }
+
+                if (_works != null)
+                {
+                    await using Db context = new Db();
+                    context.Update(_works);
+                    context.Remove(_works);
+                    await context.SaveChangesAsync();
                 }
             }
             catch
