@@ -1,6 +1,7 @@
 ﻿using System;
-using System.Linq;
+using System.Diagnostics;
 using System.Net.Http;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Timers;
@@ -92,10 +93,11 @@ namespace Insta.Working
             }
             catch (Exception ex)
             {
-                await SendMessageStop(Stop.anotherError, message:ex.Message);
+                await SendMessageStop(Stop.anotherError, message: ex.Message);
             }
-            
+
         }
+
         public async Task StartAtTime(DateTime time, WorkTask task)
         {
             try
@@ -111,6 +113,7 @@ namespace Insta.Working
         }
 
         private WorkTask _works;
+
         public async Task TimerDispose()
         {
             try
@@ -143,6 +146,7 @@ namespace Insta.Working
                     await SendMessageStop(Stop.logOut, message: "logOut");
                     return;
                 }
+
                 SendMessageStart();
                 var posts = await Instagram.Api.HashtagProcessor.GetRecentHashtagMediaListAsync(Hashtag,
                     PaginationParameters.MaxPagesToLoad(34));
@@ -179,35 +183,38 @@ namespace Insta.Working
                         await SendMessageStop(Stop.ok);
                         return;
                     }
+
                     switch (mode)
                     {
                         case Mode.like:
                             if (post.HasLiked) continue;
                             var like = await Instagram.Api.MediaProcessor.LikeMediaAsync(post.InstaIdentifier);
-                            if(!await CheckResult(like.Info)) return;
+                            if (!await CheckResult(like.Info)) return;
                             break;
                         case Mode.save:
                             var save = await Instagram.Api.MediaProcessor.SaveMediaAsync(post.InstaIdentifier);
-                            if(!await CheckResult(save.Info)) return;
+                            if (!await CheckResult(save.Info)) return;
                             break;
                         case Mode.follow:
                             var follow = await Instagram.Api.UserProcessor.FollowUserAsync(post.User.Pk);
-                            if(!await CheckResult(follow.Info)) return;
+                            if (!await CheckResult(follow.Info)) return;
                             break;
                         case Mode.likeAndSave:
                             like = await Instagram.Api.MediaProcessor.LikeMediaAsync(post.InstaIdentifier);
                             save = await Instagram.Api.MediaProcessor.SaveMediaAsync(post.InstaIdentifier);
-                            if(!await CheckResult(like.Info)) return;
-                            if(!await CheckResult(save.Info)) return;
+                            if (!await CheckResult(like.Info)) return;
+                            if (!await CheckResult(save.Info)) return;
                             break;
                     }
+
                     await Task.Delay(Rnd.Next(LowerDelay, UpperDelay) * 1000);
                 }
+
                 await SendMessageStop(Stop.ok);
             }
             catch (Exception ex)
             {
-                await SendMessageStop(Stop.anotherError, message: ex.Message);
+                await SendMessageStop(Stop.anotherError, ex.Message);
             }
         }
 
@@ -275,7 +282,7 @@ namespace Insta.Working
                         return false;
                 }
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 await SendMessageStop(Stop.anotherError, message: ex.Message);
                 return false;
@@ -319,7 +326,6 @@ namespace Insta.Working
                         result = $"\nЛайков поставлено: {_countLike}\nСохранено постов: {_countSave}";
                         break;
                 }
-
                 var log = stop == Stop.ok
                     ? $"[{DateTime.Now:HH:mm:ss}] Отработка завершена у {Owner.Id}.\nИнстаграм: {Instagram.Username}\nХештег: #{Hashtag}{result}\n"
                     : $"[{DateTime.Now:HH:mm:ss}] Отработка завершена у {Owner.Id} c ошибкой: {message}\n[{Instagram.Proxy.Id}] {Instagram.Proxy.Host}:{Instagram.Proxy.Port}.\nИнстаграм: {Instagram.Username}\nХештег: #{Hashtag}{result}\n";
@@ -335,18 +341,10 @@ namespace Insta.Working
                             $"🏁 Отработка завершена с ошибкой. Аккаунт {Instagram.Username}. Хештег #{Hashtag}. Вы достигли ограничения.{result}");
                         break;
                     case Stop.logOut:
-                    {
                         await Tgbot.SendTextMessageAsync(Owner.Id,
                             $"🏁 Отработка завершена с ошибкой. Аккаунт {Instagram.Username}. Хештег #{Hashtag}. Был осуществлен выход, пожалуйста, войдите заново.{result}");
-                        Instagram inst = Owner.Instagrams.FirstOrDefault(_ => _.Username == Instagram.Username);
-                        if (inst == null) return;
-                        await using Db db = new Db();
-                        db.UpdateRange(Owner, inst);
-                        Owner.Instagrams.Remove(inst);
-                        db.Remove(inst);
-                        await db.SaveChangesAsync();
-                        break;
-                    }
+                        await Operation.LogOut(Owner, Instagram);
+                        return;
                     case Stop.proxyError:
                         await Tgbot.SendTextMessageAsync(Owner.Id,
                             $"🏁 Отработка завершена с ошибкой. Аккаунт {Instagram.Username}. Хештег #{Hashtag}. Попробуйте сменить прокси.{result}",
@@ -360,17 +358,42 @@ namespace Insta.Working
 
                 if (_works != null)
                 {
-                    await using Db context = new Db();
-                    context.Update(_works);
-                    context.Remove(_works);
-                    await context.SaveChangesAsync();
+                    try
+                    {
+                        await using Db context = new Db();
+                        context.Update(_works);
+                        context.Remove(_works);
+                        await context.SaveChangesAsync();
+                    }
+                    catch
+                    {
+                        // ignored
+                    }
                 }
             }
-            catch
+            catch (Exception e)
             {
-                // ignored
+                try
+                {
+                    await Tgbot.SendTextMessageAsync(346978522, $"[{DateTime.Now}]: Ошибка у {Owner.Id} {e.Message}");
+                    await Tgbot.SendTextMessageAsync(346978522, $"StackTrace: {e.StackTrace}");
+                    var trace = new StackTrace(e, true);
+            
+                    foreach (var frame in trace.GetFrames())
+                    {
+                        var sb = new StringBuilder();
+                        sb.AppendLine($"Файл: {frame.GetFileName()}");
+                        sb.AppendLine($"Строка: {frame.GetFileLineNumber()}");
+                        sb.AppendLine($"Столбец: {frame.GetFileColumnNumber()}");
+                        sb.AppendLine($"Метод: {frame.GetMethod()}");
+                        await Tgbot.SendTextMessageAsync(346978522, sb.ToString());
+                    }
+                }
+                catch(Exception ex)
+                {
+                    Console.WriteLine($"Ошибка при обработке исключения!!! {e.Message}\n{ex.Message}");
+                }
             }
         }
-
     }
 }

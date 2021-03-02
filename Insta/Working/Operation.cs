@@ -8,6 +8,7 @@ using Insta.Entities;
 using InstagramApiSharp.API;
 using InstagramApiSharp.API.Builder;
 using InstagramApiSharp.Classes;
+using Microsoft.EntityFrameworkCore;
 using Telegram.Bot;
 
 namespace Insta.Working
@@ -36,6 +37,7 @@ namespace Insta.Working
                 }
                 catch
                 {
+                    instagram.Proxy = new Proxy() {Host = "default", Port = 0000};
                     return new WebProxy();
                 }
             }
@@ -73,6 +75,7 @@ namespace Insta.Working
         {
             try
             {
+                if (proxy.Host == "default") return true;
                 var webProxy = new WebProxy(proxy.Host, proxy.Port)
                 {
                     UseDefaultCredentials = false,
@@ -206,11 +209,27 @@ namespace Insta.Working
         {
             try
             {
-                if (inst.Api != null) await inst.Api.LogoutAsync();
                 await using Db db = new Db();
+                foreach (var work in user.Works.Where(_=>_.Instagram==inst).ToList())
+                {
+                    if (work.IsStarted)
+                    {
+                        work.CancelTokenSource.Cancel();
+                    }
+                    else
+                    {
+                        await work.TimerDispose();
+                    }
+
+                    user.Works.Remove(work);
+                }
                 db.UpdateRange(user, inst);
+                var works = db.Works.Include(_=>_.Instagram).Where(_ => _.Instagram == inst);
+                db.RemoveRange(works);
+                user.Instagrams.Remove(inst);
                 db.Remove(inst);
                 await db.SaveChangesAsync();
+                if (inst.Api != null) await inst.Api.LogoutAsync();
                 return true;
             }
             catch
@@ -219,7 +238,7 @@ namespace Insta.Working
             }
         }
         private static readonly TelegramBotClient Tgbot =
-            new("1682222171:AAGw4CBCJ875NRn1rFnh0sBncYkev5KIa4o");
+            new(Program.Token);
         public static async void CheckSubscribe(List<User> users)
         {
             await using Db db = new Db();

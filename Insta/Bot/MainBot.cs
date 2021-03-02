@@ -39,7 +39,7 @@ namespace Insta.Bot
         private static async void Tgbot_OnCallbackQuery(object sender, Telegram.Bot.Args.CallbackQueryEventArgs e)
         {
             try
-             {
+            {
                 var cb = e.CallbackQuery.Data;
                 var user = Users.FirstOrDefault(x => x.Id == e.CallbackQuery.From.Id);
                 if (user == null) return;
@@ -114,9 +114,17 @@ namespace Insta.Bot
                         await Tgbot.AnswerCallbackQueryAsync(e.CallbackQuery.Id, "Инстаграм деактивирован.");
                         return;
                     }
-
+                    
+                    if (!await Operation.LogOut(user, inst))
+                    {
+                        {
+                            user.state = User.State.main;
+                            await Tgbot.AnswerCallbackQueryAsync(e.CallbackQuery.Id,
+                                "Ошибка. Возможно на аккаунте запущены отложенные отработки.", showAlert: true);
+                            return;
+                        }
+                    }
                     var currentUser = inst.Api.GetLoggedUser();
-                    await Operation.LogOut(user,inst);
                     user.EnterData = new Instagram {User=user,Username = currentUser.UserName,Password = currentUser.Password};
                     login = await Operation.CheckLoginAsync(user.EnterData);
                     if (await Login(user, login))
@@ -845,7 +853,6 @@ namespace Insta.Bot
             {
                 if (login == null)
                 {
-                    Console.WriteLine("ошибка ой");
                     await Tgbot.SendTextMessageAsync(user.Id,
                         "Ошибка. Данные введены неверно.");
                     user.EnterData = null;

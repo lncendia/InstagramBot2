@@ -2,6 +2,8 @@
 using Insta.Bot;
 using System.IO;
 using System.Threading.Tasks;
+using Insta.Entities;
+using Insta.Payments;
 
 namespace Insta
 {
