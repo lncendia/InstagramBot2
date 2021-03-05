@@ -190,20 +190,25 @@ namespace Insta.Working
                             if (post.HasLiked) continue;
                             var like = await Instagram.Api.MediaProcessor.LikeMediaAsync(post.InstaIdentifier);
                             if (!await CheckResult(like.Info)) return;
+                            _countLike++;
                             break;
                         case Mode.save:
                             var save = await Instagram.Api.MediaProcessor.SaveMediaAsync(post.InstaIdentifier);
                             if (!await CheckResult(save.Info)) return;
+                            _countSave++;
                             break;
                         case Mode.follow:
                             var follow = await Instagram.Api.UserProcessor.FollowUserAsync(post.User.Pk);
                             if (!await CheckResult(follow.Info)) return;
+                            _countFollow++;
                             break;
                         case Mode.likeAndSave:
                             like = await Instagram.Api.MediaProcessor.LikeMediaAsync(post.InstaIdentifier);
                             save = await Instagram.Api.MediaProcessor.SaveMediaAsync(post.InstaIdentifier);
                             if (!await CheckResult(like.Info)) return;
                             if (!await CheckResult(save.Info)) return;
+                            _countSave++;
+                            _countLike++;
                             break;
                     }
 
@@ -236,23 +241,6 @@ namespace Insta.Working
                         await SendMessageStop(Stop.limit, message: "limit");
                         return false;
                     case ResponseType.OK:
-                        switch (mode)
-                        {
-                            case Mode.like:
-                                _countLike++;
-                                break;
-                            case Mode.save:
-                                _countSave++;
-                                break;
-                            case Mode.follow:
-                                _countFollow++;
-                                break;
-                            case Mode.likeAndSave:
-                                _countSave++;
-                                _countLike++;
-                                break;
-                        }
-
                         return true;
                     case ResponseType.LoginRequired:
                         await SendMessageStop(Stop.logOut, message: "logOut");
@@ -294,7 +282,7 @@ namespace Insta.Working
             try
             {
                 Console.WriteLine(
-                    $"[{DateTime.Now:HH:mm:ss}] Отработка запущена у {Owner.Id}.\nАккаунт: {Instagram.Username}\nХештег: #{Hashtag}\n");
+                    $"[{DateTime.Now:HH:mm:ss}] Отработка запущена у {Owner.Id} ({LowerDelay}-{UpperDelay}).\nАккаунт: {Instagram.Username}\nХештег: #{Hashtag}\n");
                 await Tgbot.SendTextMessageAsync(Owner.Id,
                     $"Отработка запущена. Аккаунт {Instagram.Username}. Хештег #{Hashtag}.",
                     replyMarkup: Keyboards.Cancel(Id));
@@ -327,8 +315,8 @@ namespace Insta.Working
                         break;
                 }
                 var log = stop == Stop.ok
-                    ? $"[{DateTime.Now:HH:mm:ss}] Отработка завершена у {Owner.Id}.\nИнстаграм: {Instagram.Username}\nХештег: #{Hashtag}{result}\n"
-                    : $"[{DateTime.Now:HH:mm:ss}] Отработка завершена у {Owner.Id} c ошибкой: {message}\n[{Instagram.Proxy.Id}] {Instagram.Proxy.Host}:{Instagram.Proxy.Port}.\nИнстаграм: {Instagram.Username}\nХештег: #{Hashtag}{result}\n";
+                    ? $"[{DateTime.Now:HH:mm:ss}] Отработка завершена у {Owner.Id} ({LowerDelay}-{UpperDelay}).\nИнстаграм: {Instagram.Username}\nХештег: #{Hashtag}{result}\n"
+                    : $"[{DateTime.Now:HH:mm:ss}] Отработка завершена у {Owner.Id} ({LowerDelay}-{UpperDelay}) c ошибкой: {message}\n[{Instagram.Proxy.Id}] {Instagram.Proxy.Host}:{Instagram.Proxy.Port}.\nИнстаграм: {Instagram.Username}\nХештег: #{Hashtag}{result}\n";
                 Console.WriteLine(log);
                 switch (stop)
                 {

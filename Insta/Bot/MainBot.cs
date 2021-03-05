@@ -175,40 +175,6 @@ namespace Insta.Bot
                                 e.CallbackQuery));
                         return;
                     }
-                    // if (inst.api == null || !inst.api.IsUserAuthenticated)
-                    // {
-                    //     user.EnterData = inst;
-                    //     var message = await Tgbot.SendTextMessageAsync(e.CallbackQuery.From.Id,
-                    //         $"Необходима аутентификация в аккаунт {inst.Username}. Пожалуйста, подождите...");
-                    //     user.EnterData = inst;
-                    //     login = await Operation.CheckLoginAsync(user.EnterData);
-                    //     try
-                    //     {
-                    //         await Tgbot.DeleteMessageAsync(message.Chat.Id, message.MessageId);
-                    //     }
-                    //     catch
-                    //     {
-                    //         // ignored
-                    //     }
-                    //     if (login?.Value != InstaLoginResult.Success)
-                    //     {
-                    //         await Tgbot.AnswerCallbackQueryAsync(e.CallbackQuery.Id,
-                    //             $"Не удалось войти. Инстаграм {inst.Username} будет удален, попробуйте войти в него заново.", showAlert:true);
-                    //         user.EnterData = null;
-                    //         await using DB db = new DB();
-                    //         db.UpdateRange(user, inst);
-                    //         user.Instagrams.Remove(inst);
-                    //         db.Remove(inst);
-                    //         await db.SaveChangesAsync();
-                    //         user.state = User.State.selectAccounts;
-                    //         await Tgbot.EditMessageTextAsync(e.CallbackQuery.From.Id, e.CallbackQuery.Message.MessageId,
-                    //             e.CallbackQuery.Message.Text,
-                    //             replyMarkup: Keyboards.NewSelect(e.CallbackQuery.Message.ReplyMarkup.InlineKeyboard.ToList(),
-                    //                 e.CallbackQuery));
-                    //         return;
-                    //     }
-                    // }
-
                     await Tgbot.AnswerCallbackQueryAsync(e.CallbackQuery.Id,
                         $"Инстаграм {inst.Username} успешно добавлен.");
                     await Tgbot.EditMessageTextAsync(e.CallbackQuery.From.Id, e.CallbackQuery.Message.MessageId,
@@ -279,34 +245,6 @@ namespace Insta.Bot
                                     $"Аккаунт {inst.Username} уже добавлен.");
                                 continue;
                             }
-                            // if (inst.Api == null || !inst.Api.IsUserAuthenticated)
-                            // {
-                            //     var message = await Tgbot.SendTextMessageAsync(e.CallbackQuery.From.Id,
-                            //         $"Необходима аутентификация в аккаунт {inst.Username}. Пожалуйста, подождите...");
-                            //     user.EnterData = inst;
-                            //     login = await Operation.CheckLoginAsync(user.EnterData);
-                            //     try
-                            //     {
-                            //         await Tgbot.DeleteMessageAsync(message.Chat.Id, message.MessageId);
-                            //     }
-                            //     catch
-                            //     {
-                            //         // ignored
-                            //     }
-                            //
-                            //     if (login?.Value != InstaLoginResult.Success)
-                            //     {
-                            //         await Tgbot.SendTextMessageAsync(e.CallbackQuery.From.Id,
-                            //             $"Не удалось войти. Инстаграм {inst.Username} будет удален, попробуйте войти в него заново.");
-                            //         user.EnterData = null;
-                            //         await using Db db = new Db();
-                            //         db.UpdateRange(user, inst);
-                            //         user.Instagrams.Remove(inst);
-                            //         db.Remove(inst);
-                            //         await db.SaveChangesAsync();
-                            //         continue;
-                            //     }
-                            // }
                             await Tgbot.SendTextMessageAsync(e.CallbackQuery.From.Id,
                                 $"Инстаграм {inst.Username} добавлен.");
                             var work = new Work(user.Works.Count, inst, user);
@@ -732,7 +670,7 @@ namespace Insta.Bot
                                 }
                                 break;
                             case User.State.selectHashtag:
-                                if (!message.Text.All(char.IsLetterOrDigit))
+                                if (!message.Text.All(_=>char.IsLetterOrDigit(_)||"_".Contains(_)))
                                 {
                                     await Tgbot.SendTextMessageAsync(message.From.Id,
                                         "Хештег может содержать только буквы и цифры!", replyMarkup:Keyboards.Main);

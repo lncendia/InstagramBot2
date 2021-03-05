@@ -32,7 +32,8 @@ namespace Insta.Entities
             setDate,
             enterCountToBuy,
             block,
-            mailingAdmin
+            mailingAdmin,
+            subscribesAdmin
             
         }
 
