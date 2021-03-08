@@ -11,9 +11,11 @@ namespace Insta.Payments
 {
     internal static class Payment
     {
-        private const string SecretKey = "eyJ2ZXJzaW9uIjoiUDJQIiwiZGF0YSI6eyJwYXlpbl9tZXJjaGFudF9zaXRlX3VpZCI6Imk0ZmVmNS0wMCIsInVzZXJfaWQiOiI3OTI2NjY2Mzk0MSIsInNlY3JldCI6ImUzZjI1YWNjZDJhZTA5YzJjZjNlMDUwMGI1YjM4NDdmMTljZjA4YjU4MjNjYmQ3M2IyY2Q2Mzk4ODE4NGE1YTcifX0=";
+        private const string SecretKey =
+            "eyJ2ZXJzaW9uIjoiUDJQIiwiZGF0YSI6eyJwYXlpbl9tZXJjaGFudF9zaXRlX3VpZCI6Imk0ZmVmNS0wMCIsInVzZXJfaWQiOiI3OTI2NjY2Mzk0MSIsInNlY3JldCI6ImUzZjI1YWNjZDJhZTA5YzJjZjNlMDUwMGI1YjM4NDdmMTljZjA4YjU4MjNjYmQ3M2IyY2Q2Mzk4ODE4NGE1YTcifX0=";
 
         private static readonly BillPaymentsClient Client = BillPaymentsClientFactory.Create(SecretKey);
+
         public static string AddTransaction(int sum, User user, ref string billId)
         {
             try
@@ -36,13 +38,14 @@ namespace Insta.Payments
                 billId = response.BillId;
                 return response.PayUrl.ToString();
             }
-            catch(Exception)
+            catch (Exception)
             {
                 return null;
             }
         }
 
         private static readonly RestClient HttpClient = new();
+
         public static bool CheckPay(User user, string billId)
         {
             try
@@ -53,11 +56,14 @@ namespace Insta.Payments
                 request.AddHeader("Authorization", $"Bearer {SecretKey}");
                 IRestResponse response1 = HttpClient.Execute(request);
                 dynamic jObject = JObject.Parse(response1.Content);
-                if (jObject.status.value!="PAID") return false;
-                int amount = (int)decimal.Parse(jObject.amount.value.ToString().Replace('.',','));
+                if (jObject.status.value != "PAID") return false;
+                int amount = (int) decimal.Parse(jObject.amount.value.ToString().Replace('.', ','));
                 using var db = new Db();
                 db.Update(user);
-                db.Add(new Transaction {Amount = amount, User = user, DateTime = DateTime.Parse(jObject.status.changedDateTime.ToString())});
+                db.Add(new Transaction
+                {
+                    Amount = amount, User = user, DateTime = DateTime.Parse(jObject.status.changedDateTime.ToString())
+                });
                 db.SaveChanges();
                 for (var i = amount / 120; i > 0; i--)
                 {
@@ -66,6 +72,7 @@ namespace Insta.Payments
                     if (inst == null) continue;
                     inst.IsDeactivated = false;
                 }
+
                 db.SaveChanges();
                 return true;
             }

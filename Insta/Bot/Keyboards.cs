@@ -59,10 +59,19 @@ namespace Insta.Bot
 
         public static InlineKeyboardMarkup Select(User user)
         {
-            List<List<InlineKeyboardButton>> accounts = user.Instagrams.Select(inst => new List<InlineKeyboardButton>() {InlineKeyboardButton.WithCallbackData($"{Emodji[MainBot.Rnd.Next(0, Emodji.Length)]} {inst.Username}", $"select_{inst.Id}")}).ToList();
+            List<List<InlineKeyboardButton>> accounts = user.Instagrams.Select(inst => new List<InlineKeyboardButton>()
+            {
+                InlineKeyboardButton.WithCallbackData($"{Emodji[MainBot.Rnd.Next(0, Emodji.Length)]} {inst.Username}",
+                    $"select_{inst.Id}")
+            }).ToList();
 
-            accounts.Add(new List<InlineKeyboardButton>() {InlineKeyboardButton.WithCallbackData("🗒 Выбрать все аккаунты", "selectAll")});
-            accounts.Add(new List<InlineKeyboardButton>() {InlineKeyboardButton.WithCallbackData("👈 Выбрать режим", "selectMode"),InlineKeyboardButton.WithCallbackData("⭐ В главное меню", "mainMenu")});
+            accounts.Add(new List<InlineKeyboardButton>()
+                {InlineKeyboardButton.WithCallbackData("🗒 Выбрать все аккаунты", "selectAll")});
+            accounts.Add(new List<InlineKeyboardButton>()
+            {
+                InlineKeyboardButton.WithCallbackData("👈 Выбрать режим", "selectMode"),
+                InlineKeyboardButton.WithCallbackData("⭐ В главное меню", "mainMenu")
+            });
 
             return new InlineKeyboardMarkup(accounts);
         }
@@ -131,6 +140,7 @@ namespace Insta.Bot
                 new() {InlineKeyboardButton.WithCallbackData("⭐ В главное меню", "mainMenu")}
             });
         }
+
         public static InlineKeyboardMarkup Phone(string number)
         {
             return new(new List<List<InlineKeyboardButton>>()
@@ -142,6 +152,7 @@ namespace Insta.Bot
                 new() {InlineKeyboardButton.WithCallbackData("⭐ В главное меню", "mainMenu")}
             });
         }
+
         public static InlineKeyboardMarkup PhoneAndEmail(string email, string number)
         {
             return new(new List<List<InlineKeyboardButton>>()
@@ -156,5 +167,5 @@ namespace Insta.Bot
             });
         }
     }
-    
+
 }

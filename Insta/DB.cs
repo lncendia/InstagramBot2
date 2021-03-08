@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Insta
 {
-    internal sealed class Db:DbContext
+    internal sealed class Db : DbContext
     {
         public DbSet<User> Users { get; set; }
         public DbSet<Instagram> Instagrams { get; set; }
@@ -19,6 +19,7 @@ namespace Insta
         {
             Database.EnsureCreated();
         }
+
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
             optionsBuilder.UseSqlite("Filename=users.sqlite");

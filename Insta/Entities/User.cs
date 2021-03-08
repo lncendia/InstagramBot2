@@ -9,6 +9,7 @@ namespace Insta.Entities
     {
         [Key, DatabaseGenerated(DatabaseGeneratedOption.None)]
         public long Id { get; set; }
+
         public List<Instagram> Instagrams { get; set; } = new();
         public List<Subscribe> Subscribes { get; set; } = new();
         [NotMapped] public List<Work> Works { get; set; } = new();
@@ -34,7 +35,7 @@ namespace Insta.Entities
             block,
             mailingAdmin,
             subscribesAdmin
-            
+
         }
 
         public State state;

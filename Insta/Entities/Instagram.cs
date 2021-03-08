@@ -11,9 +11,7 @@ namespace Insta.Entities
         public string StateData { get; set; }
         public bool IsDeactivated { get; set; } = false;
         public User User { get; set; }
-        [NotMapped]
-        public IInstaApi Api { get; set; }
-        [NotMapped]
-        public Proxy Proxy { get; set; }
+        [NotMapped] public IInstaApi Api { get; set; }
+        [NotMapped] public Proxy Proxy { get; set; }
     }
 }

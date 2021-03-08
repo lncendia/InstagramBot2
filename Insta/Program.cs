@@ -7,35 +7,13 @@ namespace Insta
 {
     internal static class Program
     {
-        public const string Token = "1682222171:AAGw4CBCJ875NRn1rFnh0sBncYkev5KIa4o";
+        public const string Token = "1485092461:AAGcPpPwxfSTnQ8cM3FWPFirvGIDjs84Pto";
 
         static async Task Main(string[] args)
         {
             await MainBot.Start();
-            Console.WriteLine("The bot has started. Enter \"1\" to load proxy.");
-            while (true)
-            {
-                try
-                {
-                    var key = Console.ReadKey();
-                    if (key.KeyChar != '1') continue;
-                    Console.WriteLine("\nJust drag and drop the file to the console.");
-                    var path = Console.ReadLine();
-                    if (path == null) return;
-                    var proxy = await File.ReadAllLinesAsync(path);
-                    foreach (var p in proxy)
-                    {
-                        string successful = Working.Operation.AddProxy(p)
-                            ? $"{p} загружена успешно."
-                            : $"{p} не загружена.";
-                        Console.WriteLine(successful);
-                    }
-                }
-                catch
-                {
-                    // ignored
-                }
-            }
+            Console.WriteLine("The bot has started. Press any key to exit.");
+            Console.ReadKey();
         }
     }
 }

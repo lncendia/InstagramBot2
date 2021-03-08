@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
@@ -18,24 +19,26 @@ namespace Insta.Bot
 {
     internal static class MainBot
     {
-        public static readonly TelegramBotClient Tgbot = 
+        public static readonly TelegramBotClient Tgbot =
             new(Program.Token);
 
-        public static List<User> Users;
+        public static ConcurrentBag<User> Users;
         public static readonly Random Rnd = new();
+
         public static async Task Start()
         {
             await using Db db = new Db();
-            Users = db.Users.Include(i => i.Instagrams).Include(i=>i.Subscribes).ToList();
-            Operation.CheckSubscribe(Users);
+           // Users = new ConcurrentBag<User>(db.Users.Include(i => i.Instagrams).Include(i => i.Subscribes).ToList());
+            Operation.CheckSubscribeAsync(Users);
             Operation.LoadProxy(db.Proxies.ToList());
-            await Operation.LoadUsersStateData(db.Instagrams.Include(i=>i.User).ToList());
-            await Operation.LoadWorks(db.Works.Include(_=>_.Instagram).ToList());
+            await Operation.LoadUsersStateDataAsync(db.Instagrams.Include(i => i.User).ToList());
+            await Operation.LoadWorksAsync(db.Works.Include(_ => _.Instagram).ToList());
             Tgbot.OnMessage += Tgbot_OnMessage;
             Tgbot.OnMessage += Admin.Admin_OnMessage;
             Tgbot.OnCallbackQuery += Tgbot_OnCallbackQuery;
             Tgbot.StartReceiving();
         }
+
         private static async void Tgbot_OnCallbackQuery(object sender, Telegram.Bot.Args.CallbackQueryEventArgs e)
         {
             try
@@ -50,7 +53,7 @@ namespace Insta.Bot
                     {
                         string message = e.CallbackQuery.Message.Text;
                         message = message.Replace("❌ Статус: Не оплачено", "✔ Статус: Оплачено");
-                        message=message.Remove(message.IndexOf("Оплачено", StringComparison.Ordinal)+8);
+                        message = message.Remove(message.IndexOf("Оплачено", StringComparison.Ordinal) + 8);
                         await Tgbot.EditMessageTextAsync(e.CallbackQuery.From.Id, e.CallbackQuery.Message.MessageId,
                             message);
                         await Tgbot.AnswerCallbackQueryAsync(e.CallbackQuery.Id, "Успешно оплачено.");
@@ -63,23 +66,25 @@ namespace Insta.Bot
                 if (cb.StartsWith("exit"))
                 {
                     var instagram = user.Instagrams.FirstOrDefault(_ => _.Id == int.Parse(cb[5..]));
-                    if (instagram==null)
+                    if (instagram == null)
                     {
                         await Tgbot.AnswerCallbackQueryAsync(e.CallbackQuery.Id, "Инстаграм не найден.");
                         await Tgbot.DeleteMessageAsync(e.CallbackQuery.From.Id, e.CallbackQuery.Message.MessageId);
                     }
                     else
                     {
-                        string message = (await Operation.LogOut(user, instagram)) ? "Успешно." : "Ошибка.";
+                        string message = (await Operation.LogOutAsync(user, instagram)) ? "Успешно." : "Ошибка.";
                         await Tgbot.AnswerCallbackQueryAsync(e.CallbackQuery.Id, message);
                         await Tgbot.DeleteMessageAsync(e.CallbackQuery.From.Id, e.CallbackQuery.Message.MessageId);
                     }
+
                     return;
                 }
+
                 if (cb.StartsWith("changeProxy"))
                 {
                     var instagram = user.Instagrams.FirstOrDefault(_ => _.Id == int.Parse(cb[12..]));
-                    if (instagram==null)
+                    if (instagram == null)
                     {
                         await Tgbot.AnswerCallbackQueryAsync(e.CallbackQuery.Id, "Инстаграм не найден.");
                         await Tgbot.DeleteMessageAsync(e.CallbackQuery.From.Id, e.CallbackQuery.Message.MessageId);
@@ -90,13 +95,14 @@ namespace Insta.Bot
                         await Tgbot.AnswerCallbackQueryAsync(e.CallbackQuery.Id, message);
                         await Tgbot.DeleteMessageAsync(e.CallbackQuery.From.Id, e.CallbackQuery.Message.MessageId);
                     }
+
                     return;
                 }
 
                 IResult<InstaLoginResult> login;
                 if (cb.StartsWith("reLogIn"))
                 {
-                    if(user.state!=User.State.main) return;
+                    if (user.state != User.State.main) return;
                     await Tgbot.DeleteMessageAsync(e.CallbackQuery.From.Id, e.CallbackQuery.Message.MessageId);
                     user.state = User.State.block;
                     Instagram inst = user.Instagrams.FirstOrDefault(_ => _.Id == int.Parse(cb[8..]));
@@ -114,8 +120,8 @@ namespace Insta.Bot
                         await Tgbot.AnswerCallbackQueryAsync(e.CallbackQuery.Id, "Инстаграм деактивирован.");
                         return;
                     }
-                    
-                    if (!await Operation.LogOut(user, inst))
+
+                    if (!await Operation.LogOutAsync(user, inst))
                     {
                         {
                             user.state = User.State.main;
@@ -124,8 +130,10 @@ namespace Insta.Bot
                             return;
                         }
                     }
+
                     var currentUser = inst.Api.GetLoggedUser();
-                    user.EnterData = new Instagram {User=user,Username = currentUser.UserName,Password = currentUser.Password};
+                    user.EnterData = new Instagram
+                        {User = user, Username = currentUser.UserName, Password = currentUser.Password};
                     login = await Operation.CheckLoginAsync(user.EnterData);
                     if (await Login(user, login))
                     {
@@ -137,6 +145,7 @@ namespace Insta.Bot
                         await db.SaveChangesAsync();
                     }
                 }
+
                 if (cb.StartsWith("select_"))
                 {
                     if (user.state != User.State.selectAccounts) return;
@@ -148,18 +157,21 @@ namespace Insta.Bot
                         await Tgbot.AnswerCallbackQueryAsync(e.CallbackQuery.Id, "Инстаграм не найден.");
                         await Tgbot.EditMessageTextAsync(e.CallbackQuery.From.Id, e.CallbackQuery.Message.MessageId,
                             e.CallbackQuery.Message.Text,
-                            replyMarkup: Keyboards.NewSelect(e.CallbackQuery.Message.ReplyMarkup.InlineKeyboard.ToList(),
+                            replyMarkup: Keyboards.NewSelect(
+                                e.CallbackQuery.Message.ReplyMarkup.InlineKeyboard.ToList(),
                                 e.CallbackQuery));
                         return;
                     }
-                    
+
                     if (inst.IsDeactivated)
                     {
                         user.state = User.State.selectAccounts;
-                        await Tgbot.AnswerCallbackQueryAsync(e.CallbackQuery.Id, $"Аккаунт {inst.Username} деактивирован. Купите подписку, чтобы активировать аккаунт.");
+                        await Tgbot.AnswerCallbackQueryAsync(e.CallbackQuery.Id,
+                            $"Аккаунт {inst.Username} деактивирован. Купите подписку, чтобы активировать аккаунт.");
                         await Tgbot.EditMessageTextAsync(e.CallbackQuery.From.Id, e.CallbackQuery.Message.MessageId,
                             e.CallbackQuery.Message.Text,
-                            replyMarkup: Keyboards.NewSelect(e.CallbackQuery.Message.ReplyMarkup.InlineKeyboard.ToList(),
+                            replyMarkup: Keyboards.NewSelect(
+                                e.CallbackQuery.Message.ReplyMarkup.InlineKeyboard.ToList(),
                                 e.CallbackQuery));
                         return;
                     }
@@ -171,10 +183,12 @@ namespace Insta.Bot
                             $"Аккаунт {inst.Username} уже добавлен.");
                         await Tgbot.EditMessageTextAsync(e.CallbackQuery.From.Id, e.CallbackQuery.Message.MessageId,
                             e.CallbackQuery.Message.Text,
-                            replyMarkup: Keyboards.NewSelect(e.CallbackQuery.Message.ReplyMarkup.InlineKeyboard.ToList(),
+                            replyMarkup: Keyboards.NewSelect(
+                                e.CallbackQuery.Message.ReplyMarkup.InlineKeyboard.ToList(),
                                 e.CallbackQuery));
                         return;
                     }
+
                     await Tgbot.AnswerCallbackQueryAsync(e.CallbackQuery.Id,
                         $"Инстаграм {inst.Username} успешно добавлен.");
                     await Tgbot.EditMessageTextAsync(e.CallbackQuery.From.Id, e.CallbackQuery.Message.MessageId,
@@ -206,7 +220,7 @@ namespace Insta.Bot
                     }
                     else
                     {
-                        await work.TimerDispose();
+                        await work.TimerDisposeAsync();
                     }
 
                     user.Works.Remove(work);
@@ -220,7 +234,7 @@ namespace Insta.Bot
                 switch (cb)
                 {
                     case "selectAll":
-                        if(user.state!=User.State.selectAccounts) return;
+                        if (user.state != User.State.selectAccounts) return;
                         try
                         {
                             await Tgbot.DeleteMessageAsync(e.CallbackQuery.From.Id, e.CallbackQuery.Message.MessageId);
@@ -239,12 +253,14 @@ namespace Insta.Bot
                                     $"Аккаунт {inst.Username} деактивирован. Купите подписку, чтобы активировать аккаунт.");
                                 continue;
                             }
+
                             if (user.CurrentWorks.FirstOrDefault(x => x.Instagram.Username == inst.Username) != null)
                             {
                                 await Tgbot.SendTextMessageAsync(e.CallbackQuery.From.Id,
                                     $"Аккаунт {inst.Username} уже добавлен.");
                                 continue;
                             }
+
                             await Tgbot.SendTextMessageAsync(e.CallbackQuery.From.Id,
                                 $"Инстаграм {inst.Username} добавлен.");
                             var work = new Work(user.Works.Count, inst, user);
@@ -256,28 +272,28 @@ namespace Insta.Bot
                         user.state = User.State.selectMode;
                         break;
                     case "startLike":
-                        if(user.state!=User.State.selectMode) return;
+                        if (user.state != User.State.selectMode) return;
                         user.CurrentWorks.ForEach(x => x.SetMode(Work.Mode.like));
                         user.state = User.State.selectHashtag;
                         await Tgbot.EditMessageTextAsync(e.CallbackQuery.From.Id, e.CallbackQuery.Message.MessageId,
                             "Введите хештег без #.", replyMarkup: Keyboards.Main);
                         break;
                     case "startSave":
-                        if(user.state!=User.State.selectMode) return;
+                        if (user.state != User.State.selectMode) return;
                         user.CurrentWorks.ForEach(x => x.SetMode(Work.Mode.save));
                         user.state = User.State.selectHashtag;
                         await Tgbot.EditMessageTextAsync(e.CallbackQuery.From.Id, e.CallbackQuery.Message.MessageId,
                             "Введите хештег без #.", replyMarkup: Keyboards.Main);
                         break;
                     case "startFollowing":
-                        if(user.state!=User.State.selectMode) return;
+                        if (user.state != User.State.selectMode) return;
                         user.CurrentWorks.ForEach(x => x.SetMode(Work.Mode.follow));
                         user.state = User.State.selectHashtag;
                         await Tgbot.EditMessageTextAsync(e.CallbackQuery.From.Id, e.CallbackQuery.Message.MessageId,
                             "Введите хештег без #.", replyMarkup: Keyboards.Main);
                         break;
                     case "startAll":
-                        if(user.state!=User.State.selectMode) return;
+                        if (user.state != User.State.selectMode) return;
                         user.CurrentWorks.ForEach(x => x.SetMode(Work.Mode.likeAndSave));
                         user.state = User.State.selectHashtag;
                         await Tgbot.EditMessageTextAsync(e.CallbackQuery.From.Id, e.CallbackQuery.Message.MessageId,
@@ -291,13 +307,14 @@ namespace Insta.Bot
                                 "Вы не выбрали ни одного аккаунта.");
                             return;
                         }
+
                         user.state = User.State.selectMode;
                         await Tgbot.DeleteMessageAsync(e.CallbackQuery.From.Id, e.CallbackQuery.Message.MessageId);
                         await Tgbot.SendTextMessageAsync(e.CallbackQuery.From.Id,
                             "Выберите режим.", replyMarkup: Keyboards.SelectMode);
                         break;
                     case "startWorking":
-                        if(user.state!=User.State.main) return;
+                        if (user.state != User.State.main) return;
                         await Tgbot.DeleteMessageAsync(e.CallbackQuery.From.Id, e.CallbackQuery.Message.MessageId);
                         if (user.Instagrams.Count == 0)
                         {
@@ -305,8 +322,9 @@ namespace Insta.Bot
                                 "У вас нет аккаунтов.");
                             break;
                         }
+
                         await Tgbot.SendTextMessageAsync(e.CallbackQuery.From.Id,
-                            "Нажмите на нужные аккаунты.",replyMarkup:Keyboards.Select(user));
+                            "Нажмите на нужные аккаунты.", replyMarkup: Keyboards.Select(user));
                         user.state = User.State.selectAccounts;
                         break;
                     case "stopWorking":
@@ -318,6 +336,7 @@ namespace Insta.Bot
                                 "У вас нет активных отработок.");
                             break;
                         }
+
                         foreach (var x in user.Works.ToList())
                         {
                             var str = x.IsStarted ? "Уже началась" : "Еще не началась";
@@ -325,12 +344,13 @@ namespace Insta.Bot
                                 $"Аккаунт {x.Instagram.Username}. Хештег #{x.Hashtag}. {str}.",
                                 replyMarkup: Keyboards.Cancel(x.Id));
                         }
+
                         break;
                     case "startNow":
                         if (user.state != User.State.setTimeWork) return;
                         await Tgbot.DeleteMessageAsync(e.CallbackQuery.From.Id,
                             e.CallbackQuery.Message.MessageId);
-                        user.CurrentWorks.ForEach(x => x.Start());
+                        user.CurrentWorks.ForEach(async x => await x.StartAsync());
                         user.CurrentWorks.Clear();
                         user.state = User.State.main;
                         break;
@@ -340,25 +360,27 @@ namespace Insta.Bot
                             e.CallbackQuery.Message.MessageId);
                         user.state = User.State.setDate;
                         await Tgbot.SendTextMessageAsync(e.CallbackQuery.From.Id,
-                            "Введите время запуска по МСК в формате ЧЧ:мм. (<strong>Пример:</strong> <em>13:30</em>).",replyMarkup: Keyboards.Back,parseMode: ParseMode.Html);
+                            "Введите время запуска по МСК в формате ЧЧ:мм. (<strong>Пример:</strong> <em>13:30</em>).",
+                            replyMarkup: Keyboards.Back, parseMode: ParseMode.Html);
                         break;
                     case "enterData":
-                        if(user.state!=User.State.main) return;
+                        if (user.state != User.State.main) return;
                         await Tgbot.DeleteMessageAsync(e.CallbackQuery.From.Id,
                             e.CallbackQuery.Message.MessageId);
-                        if (user.Instagrams.Count >=user.Subscribes.Count)
+                        if (user.Instagrams.Count >= user.Subscribes.Count)
                         {
                             await Tgbot.SendTextMessageAsync(e.CallbackQuery.From.Id,
                                 "Увы... Так не работает.");
                             return;
                         }
-                        user.EnterData = new Instagram(){User=user};
+
+                        user.EnterData = new Instagram() {User = user};
                         user.state = User.State.login;
                         await Tgbot.SendTextMessageAsync(e.CallbackQuery.From.Id,
                             "Введите логин", replyMarkup: Keyboards.Main);
                         break;
                     case "acceptEntry":
-                        if(user.state!=User.State.challengeRequired) return;
+                        if (user.state != User.State.challengeRequired) return;
                         login = await Operation.CheckLoginAsync(user.EnterData);
                         if (login?.Value == InstaLoginResult.Success)
                         {
@@ -378,6 +400,7 @@ namespace Insta.Bot
                                 await Tgbot.AnswerCallbackQueryAsync(e.CallbackQuery.Id,
                                     "Ошибка.");
                             }
+
                             await Tgbot.DeleteMessageAsync(e.CallbackQuery.From.Id,
                                 e.CallbackQuery.Message.MessageId);
                             user.state = User.State.main;
@@ -387,6 +410,7 @@ namespace Insta.Bot
                             await Tgbot.AnswerCallbackQueryAsync(e.CallbackQuery.Id,
                                 "Произошла ошибка, попробуйте еще раз.");
                         }
+
                         break;
                     case "challengeEmail":
                         if (user.state != User.State.challengeRequired) return;
@@ -399,6 +423,7 @@ namespace Insta.Bot
                             user.state = User.State.main;
                             return;
                         }
+
                         user.state = User.State.challengeRequiredAccept;
                         await Tgbot.SendTextMessageAsync(e.CallbackQuery.From.Id,
                             "Код отправлен. Введите код из сообщения.", replyMarkup: Keyboards.Main);
@@ -407,16 +432,16 @@ namespace Insta.Bot
                         if (user.state != User.State.challengeRequired) return;
                         await Tgbot.DeleteMessageAsync(e.CallbackQuery.From.Id, e.CallbackQuery.Message.MessageId);
                         var response2 = await user.EnterData.Api.RequestVerifyCodeToSMSForChallengeRequireAsync();
-                            if (!response2.Succeeded)
-                            {
-                                await Tgbot.SendTextMessageAsync(e.CallbackQuery.From.Id,
-                                    "Ошибка. Попробуйте войти снова.");
-                                user.state = User.State.main;
-                            }
+                        if (!response2.Succeeded)
+                        {
+                            await Tgbot.SendTextMessageAsync(e.CallbackQuery.From.Id,
+                                "Ошибка. Попробуйте войти снова.");
+                            user.state = User.State.main;
+                        }
 
                         user.state = User.State.challengeRequiredAccept;
                         await Tgbot.SendTextMessageAsync(e.CallbackQuery.From.Id,
-                            "Код отправлен. Введите код из сообщения.",replyMarkup: Keyboards.Main);
+                            "Код отправлен. Введите код из сообщения.", replyMarkup: Keyboards.Main);
                         break;
                     case "back":
                         switch (user.state)
@@ -456,15 +481,17 @@ namespace Insta.Bot
                                 break;
 
                         }
+
                         break;
                     case "mainMenu":
-                        if(user.state == User.State.block) return;
+                        if (user.state == User.State.block) return;
                         await Tgbot.DeleteMessageAsync(e.CallbackQuery.From.Id,
                             e.CallbackQuery.Message.MessageId);
                         foreach (var work in user.CurrentWorks)
                         {
                             user.Works.Remove(work);
                         }
+
                         user.CurrentWorks.Clear();
                         user.EnterData = null;
                         user.state = User.State.main;
@@ -506,11 +533,12 @@ namespace Insta.Bot
                 switch (message.Text)
                 {
                     case "/start":
-                        if(user.state == User.State.block) return;
+                        if (user.state == User.State.block) return;
                         foreach (var work in user.CurrentWorks)
                         {
                             user.Works.Remove(work);
                         }
+
                         user.CurrentWorks.Clear();
                         user.EnterData = null;
                         user.state = User.State.main;
@@ -525,7 +553,8 @@ namespace Insta.Bot
                                 $"{Keyboards.Emodji[Rnd.Next(0, Keyboards.Emodji.Length)]} Аккаунт {x.Username}",
                                 replyMarkup: Keyboards.Exit(x.Id));
                         }
-                        if(user.Instagrams.Count<user.Subscribes.Count)
+
+                        if (user.Instagrams.Count < user.Subscribes.Count)
                             await Tgbot.SendTextMessageAsync(message.Chat.Id,
                                 "Вы можете добавить аккаунт",
                                 replyMarkup: new InlineKeyboardMarkup(
@@ -535,6 +564,7 @@ namespace Insta.Bot
                             await Tgbot.SendTextMessageAsync(message.Chat.Id,
                                 "Оплатите подписку, чтобы добавить аккаунт.", replyMarkup: Keyboards.MainKeyboard);
                         }
+
                         break;
                     case "❤ Отработка":
                         if (user.state != User.State.main) return;
@@ -565,6 +595,7 @@ namespace Insta.Bot
                             i++;
                             subscribes += $"Подписка {i}. Истекает {sub.EndSubscribe:D}\n";
                         }
+
                         await Tgbot.SendTextMessageAsync(message.Chat.Id,
                             subscribes);
                         break;
@@ -605,6 +636,7 @@ namespace Insta.Bot
                                     user.state = User.State.main;
                                     await db.SaveChangesAsync();
                                 }
+
                                 break;
                             case User.State.twoFactor:
                                 var x = await Operation.SendCodeTwoFactorAsync(user.EnterData.Api, message.Text);
@@ -653,6 +685,7 @@ namespace Insta.Bot
                                     user.EnterData = null;
                                     await db.SaveChangesAsync();
                                 }
+
                                 break;
                             case User.State.challengeRequiredPhoneCall:
                                 bool isRight = await Operation.SubmitPhoneChallengeRequiredAsync(user.EnterData.Api,
@@ -668,26 +701,30 @@ namespace Insta.Bot
                                     await Tgbot.SendTextMessageAsync(message.From.Id,
                                         "Ошибка. Неверный номер.", replyMarkup: Keyboards.Main);
                                 }
+
                                 break;
                             case User.State.selectHashtag:
-                                if (!message.Text.All(_=>char.IsLetterOrDigit(_)||"_".Contains(_)))
+                                if (!message.Text.All(_ => char.IsLetterOrDigit(_) || "_".Contains(_)))
                                 {
                                     await Tgbot.SendTextMessageAsync(message.From.Id,
-                                        "Хештег может содержать только буквы и цифры!", replyMarkup:Keyboards.Main);
+                                        "Хештег может содержать только буквы и цифры!", replyMarkup: Keyboards.Main);
                                     return;
                                 }
+
                                 user.CurrentWorks.ForEach(_ => _.SetHashtag(message.Text));
                                 user.state = User.State.setDuration;
                                 await Tgbot.SendTextMessageAsync(message.From.Id,
-                                    "Введите пределы интервала в секундах. (<strong>Пример:</strong> <em>30:120</em>).\nРекомендуемые параметры нижнего предела:\nНоввый аккаунт: <code>120 секунд.</code>\n3 - 6 месяцев: <code>90 секунд.</code>\nБольше года: <code>72 секунды.</code>\n", replyMarkup: Keyboards.Back,parseMode: ParseMode.Html);
+                                    "Введите пределы интервала в секундах. (<strong>Пример:</strong> <em>30:120</em>).\nРекомендуемые параметры нижнего предела:\nНоввый аккаунт: <code>120 секунд.</code>\n3 - 6 месяцев: <code>90 секунд.</code>\nБольше года: <code>72 секунды.</code>\n",
+                                    replyMarkup: Keyboards.Back, parseMode: ParseMode.Html);
                                 break;
                             case User.State.setDuration:
-                                if(!e.Message.Text.Contains(':'))
+                                if (!e.Message.Text.Contains(':'))
                                 {
                                     await Tgbot.SendTextMessageAsync(message.From.Id,
                                         "Неверный формат!");
                                     return;
                                 }
+
                                 if (!int.TryParse(message.Text.Split(':')[0], out var lowerDelay))
                                 {
                                     await Tgbot.SendTextMessageAsync(message.From.Id,
@@ -708,6 +745,7 @@ namespace Insta.Bot
                                         "Верхняя граница не может быть больше нижней!");
                                     return;
                                 }
+
                                 if (upperDelay > 300)
                                 {
                                     await Tgbot.SendTextMessageAsync(message.From.Id,
@@ -715,7 +753,7 @@ namespace Insta.Bot
                                     return;
                                 }
 
-                                user.CurrentWorks.ForEach(_ => _.SetDuration(lowerDelay,upperDelay));
+                                user.CurrentWorks.ForEach(_ => _.SetDuration(lowerDelay, upperDelay));
                                 await Tgbot.SendTextMessageAsync(message.From.Id,
                                     "Выбирете, когда хотите начать.", replyMarkup: Keyboards.StartWork);
                                 user.state = User.State.setTimeWork;
@@ -728,13 +766,15 @@ namespace Insta.Bot
                                     {
                                         timeEnter = timeEnter.AddDays(1);
                                     }
-                                    user.CurrentWorks.ForEach(_ => _?.StartAtTime(timeEnter));
+
+                                    user.CurrentWorks.ForEach(_ => _?.StartAtTimeAsync(timeEnter));
                                     foreach (var work in user.CurrentWorks.Where(work => work != null))
                                     {
                                         await Tgbot.SendTextMessageAsync(message.From.Id,
                                             $"Отработка на аккаунте {work.Instagram.Username} по хештегу #{work.Hashtag} начнётся в {timeEnter:HH:mm:ss}.",
                                             replyMarkup: Keyboards.Cancel(work.Id));
                                     }
+
                                     user.CurrentWorks.Clear();
                                     user.state = User.State.main;
                                 }
@@ -743,6 +783,7 @@ namespace Insta.Bot
                                     await Tgbot.SendTextMessageAsync(message.From.Id,
                                         "Неверный формат времени.");
                                 }
+
                                 break;
                             case User.State.enterCountToBuy:
                                 int count;
@@ -775,6 +816,7 @@ namespace Insta.Bot
                                     replyMarkup: Keyboards.CheckBill(billId));
                                 break;
                         }
+
                         break;
                 }
             }
@@ -797,6 +839,7 @@ namespace Insta.Bot
                     user.state = User.State.main;
                     return false;
                 }
+
                 switch (login.Value)
                 {
                     case InstaLoginResult.Success:
@@ -833,7 +876,8 @@ namespace Insta.Bot
                         break;
                     case InstaLoginResult.TwoFactorRequired:
                         await Tgbot.SendTextMessageAsync(user.Id,
-                            "Необходима двухфакторная аутентификация. Введите код из сообщения.", replyMarkup: Keyboards.Main);
+                            "Необходима двухфакторная аутентификация. Введите код из сообщения.",
+                            replyMarkup: Keyboards.Main);
                         user.state = User.State.twoFactor;
                         break;
                     case InstaLoginResult.ChallengeRequired:
@@ -847,11 +891,13 @@ namespace Insta.Bot
                             user.state = User.State.main;
                             return false;
                         }
+
                         if (challenge.Value.SubmitPhoneRequired)
                         {
                             user.state = User.State.challengeRequiredPhoneCall;
                             await Tgbot.SendTextMessageAsync(user.Id,
-                                "Инстаграм просит подтверждение. Введите подключенный к аккаунту номер.", replyMarkup: Keyboards.Main);
+                                "Инстаграм просит подтверждение. Введите подключенный к аккаунту номер.",
+                                replyMarkup: Keyboards.Main);
                             break;
                         }
 
@@ -866,16 +912,19 @@ namespace Insta.Bot
                         }
                         else
                         {
-                            key = Keyboards.PhoneAndEmail(challenge.Value.StepData.Email,challenge.Value.StepData.PhoneNumber);
+                            key = Keyboards.PhoneAndEmail(challenge.Value.StepData.Email,
+                                challenge.Value.StepData.PhoneNumber);
                         }
+
                         user.state = User.State.challengeRequired;
                         await Tgbot.SendTextMessageAsync(user.Id,
                             "Инстаграм просит подтверждение. Выбирете, каким образом вы хотите подтвердить код:",
                             replyMarkup: key);
-                    } 
+                    }
                         break;
                     case InstaLoginResult.Exception:
-                        if (login.Info.Exception is HttpRequestException||login.Info.Exception is NullReferenceException)
+                        if (login.Info.Exception is HttpRequestException ||
+                            login.Info.Exception is NullReferenceException)
                         {
                             Operation.CheckProxy(user.EnterData.Proxy);
                             await Tgbot.SendTextMessageAsync(user.Id,
@@ -883,6 +932,7 @@ namespace Insta.Bot
                             user.EnterData = null;
                             user.state = User.State.main;
                         }
+
                         break;
                 }
 
@@ -898,7 +948,7 @@ namespace Insta.Bot
         public static async void Error(User user)
         {
             if (user == null) return;
-            user.CurrentWorks.ForEach(x=>user.Works.Remove(x));
+            user.CurrentWorks.ForEach(x => user.Works.Remove(x));
             user.EnterData = null;
             user.state = User.State.main;
             try

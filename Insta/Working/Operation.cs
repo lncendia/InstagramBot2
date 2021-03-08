@@ -19,6 +19,7 @@ namespace Insta.Working
         private static List<Proxy> _proxies;
         private static int _number;
         private static readonly object Locker = new();
+
         private static IWebProxy GetProxy(Instagram instagram)
         {
             lock (Locker)
@@ -26,11 +27,11 @@ namespace Insta.Working
                 try
                 {
                     var proxy = _proxies[_number];
-                    _number=(++_number)%_proxies.Count;
-                    var webProxy = new WebProxy(proxy.Host,proxy.Port)
+                    _number = (++_number) % _proxies.Count;
+                    var webProxy = new WebProxy(proxy.Host, proxy.Port)
                     {
-                         UseDefaultCredentials = false,
-                         Credentials = new NetworkCredential(proxy.Login, proxy.Password)
+                        UseDefaultCredentials = false,
+                        Credentials = new NetworkCredential(proxy.Login, proxy.Password)
                     };
                     instagram.Proxy = proxy;
                     //Console.WriteLine($"[{proxy.Id}]{proxy.Host}:{proxy.Port}");
@@ -49,29 +50,7 @@ namespace Insta.Working
         {
             _proxies = proxies;
         }
-        public static bool AddProxy(string credentials)
-        {
-            try
-            {
-                var data = credentials.Split(':');
-                if (data.Length != 4) return false;
-                using Db db = new Db();
-                var proxy = new Proxy()
-                {
-                    Host = data[0],
-                    Port = int.Parse(data[1]),
-                    Login = data[2],
-                    Password = data[3]
-                };
-                db.Add(proxy);
-                db.SaveChanges();
-                return true;
-            }
-            catch
-            {
-                return false;
-            }
-        }
+
         public static bool CheckProxy(Proxy proxy)
         {
             try
@@ -89,7 +68,8 @@ namespace Insta.Working
                 {
                     case HttpStatusCode.ProxyAuthenticationRequired:
                     {
-                        Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] (id {proxy.Id}): {proxy.Host}:{proxy.Port} - неверные данные, прокси будет удалена!\n");
+                        Console.WriteLine(
+                            $"[{DateTime.Now:HH:mm:ss}] (id {proxy.Id}): {proxy.Host}:{proxy.Port} - неверные данные, прокси будет удалена!\n");
                         using Db db = new Db();
                         _proxies.Remove(proxy);
                         _number %= _proxies.Count;
@@ -101,13 +81,13 @@ namespace Insta.Working
                     case HttpStatusCode.OK:
                         return true;
                     default:
-                        ProxyError(proxy,x.Result.StatusCode);
+                        ProxyError(proxy, x.Result.StatusCode);
                         return false;
-                } 
+                }
             }
             catch
             {
-                ProxyError(proxy,HttpStatusCode.NotFound);
+                ProxyError(proxy, HttpStatusCode.NotFound);
                 return false;
             }
         }
@@ -128,6 +108,7 @@ namespace Insta.Working
                 // ignored
             }
         }
+
         public static bool ChangeProxy(Instagram instagram)
         {
             var data = instagram.Api.GetStateDataAsObject();
@@ -137,6 +118,7 @@ namespace Insta.Working
             instagram.Api.LoadStateDataFromObject(data);
             return true;
         }
+
         public static async Task<IResult<InstaLoginResult>> CheckLoginAsync(Instagram instagram)
         {
             try
@@ -164,7 +146,7 @@ namespace Insta.Working
 
         }
 
-        private static async Task LoadFromStateData(Instagram instagram)
+        private static async Task LoadFromStateDataAsync(Instagram instagram)
         {
             try
             {
@@ -180,23 +162,26 @@ namespace Insta.Working
             }
         }
 
-        public static async Task LoadUsersStateData(List<Instagram> instagrams)
+        public static async Task LoadUsersStateDataAsync(List<Instagram> instagrams)
         {
             foreach (var instagram in instagrams)
             {
-                await LoadFromStateData(instagram);
+                await LoadFromStateDataAsync(instagram);
             }
         }
+
         public static async Task<IResult<InstaLoginTwoFactorResult>> SendCodeTwoFactorAsync(IInstaApi api, string code)
         {
             var response = await api.TwoFactorLoginAsync(code);
             return response.Succeeded ? response : null;
         }
+
         public static async Task<IResult<InstaLoginResult>> SendCodeChallengeRequiredAsync(IInstaApi api, string code)
         {
             var response = await api.VerifyCodeForChallengeRequireAsync(code);
             return response.Succeeded ? response : null;
         }
+
         public static async Task<bool> SubmitPhoneChallengeRequiredAsync(IInstaApi api, string phoneNumber)
         {
             if (!phoneNumber.StartsWith("+"))
@@ -206,12 +191,12 @@ namespace Insta.Working
             return submitPhone.Succeeded;
         }
 
-        public static async Task<bool> LogOut(User user, Instagram inst)
+        public static async Task<bool> LogOutAsync(User user, Instagram inst)
         {
             try
             {
                 await using Db db = new Db();
-                foreach (var work in user.Works.Where(_=>_.Instagram==inst).ToList())
+                foreach (var work in user.Works.Where(_ => _.Instagram == inst).ToList())
                 {
                     if (work.IsStarted)
                     {
@@ -219,13 +204,14 @@ namespace Insta.Working
                     }
                     else
                     {
-                        await work.TimerDispose();
+                        await work.TimerDisposeAsync();
                     }
 
                     user.Works.Remove(work);
                 }
+
                 db.UpdateRange(user, inst);
-                var works = db.Works.Include(_=>_.Instagram).Where(_ => _.Instagram == inst);
+                var works = db.Works.Include(_ => _.Instagram).Where(_ => _.Instagram == inst);
                 db.RemoveRange(works);
                 user.Instagrams.Remove(inst);
                 db.Remove(inst);
@@ -238,54 +224,70 @@ namespace Insta.Working
                 return false;
             }
         }
+
         private static readonly TelegramBotClient Tgbot =
             new(Program.Token);
-        public static async void CheckSubscribe(List<User> users)
+
+        public static async void CheckSubscribeAsync(List<User> users)
         {
-            await using Db db = new Db();
-            foreach (var user in users)
+            while (true)
             {
-                var accounts = user.Instagrams.ToList().Where(x=>!x.IsDeactivated).ToList();
-                var overdue = user.Subscribes.ToList()
-                    .Where(subscribe => subscribe.EndSubscribe.CompareTo(DateTime.Now) <= 0).ToList();
-                foreach (var subscribe in overdue)
-                {
-                    db.UpdateRange(user,subscribe);
-                    db.Remove(subscribe);
-                }
-                var accountsUsername = string.Empty;
-                for(var i = accounts.Count-(user.Subscribes.Count-overdue.Count);i>0;i--)
-                {
-                    var inst = accounts[^i];
-                    if (inst == null) continue;
-                    db.UpdateRange(inst);
-                    inst.IsDeactivated = true;
-                    accountsUsername += ", " + inst.Username;
-                }
                 try
                 {
-                    if (overdue.Count > 0)
+                    await using Db db = new Db();
+                    foreach (var user in users)
                     {
-                        if(accountsUsername!=String.Empty)
-                            await Tgbot.SendTextMessageAsync(user.Id,
-                                $"Действие {overdue.Count} подписки(ок) завершилось. Аккаунт(ы) {accountsUsername[2..]} деактивирован(ы).");
-                        else
+                        var accounts = user.Instagrams.ToList().Where(x => !x.IsDeactivated).ToList();
+                        var overdue = user.Subscribes.ToList()
+                            .Where(subscribe => subscribe.EndSubscribe.CompareTo(DateTime.Now) <= 0).ToList();
+                        foreach (var subscribe in overdue)
                         {
-                            await Tgbot.SendTextMessageAsync(user.Id,
-                                $"Действие {overdue.Count} подписки(ок) завершилось.");
+                            db.UpdateRange(user, subscribe);
+                            db.Remove(subscribe);
+                        }
+
+                        var accountsUsername = string.Empty;
+                        for (var i = accounts.Count - (user.Subscribes.Count - overdue.Count); i > 0; i--)
+                        {
+                            var inst = accounts[^i];
+                            if (inst == null) continue;
+                            db.UpdateRange(inst);
+                            inst.IsDeactivated = true;
+                            accountsUsername += ", " + inst.Username;
+                        }
+
+                        try
+                        {
+                            if (overdue.Count > 0)
+                            {
+                                if (accountsUsername != String.Empty)
+                                    await Tgbot.SendTextMessageAsync(user.Id,
+                                        $"Действие {overdue.Count} подписки(ок) завершилось. Аккаунт(ы) {accountsUsername[2..]} деактивирован(ы).");
+                                else
+                                {
+                                    await Tgbot.SendTextMessageAsync(user.Id,
+                                        $"Действие {overdue.Count} подписки(ок) завершилось.");
+                                }
+                            }
+                        }
+                        catch
+                        {
+                            // ignored
                         }
                     }
+
+                    await db.SaveChangesAsync();
+                    Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] Произведена проверка подписок\n");
+                    await Task.Delay(new TimeSpan(1, 0, 0, 0));
                 }
-                catch
+                catch (Exception ex)
                 {
-                    // ignored
+                    Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] Ошибка при проверке подписовк {ex.Message}\n");
                 }
             }
-            await db.SaveChangesAsync();
-            await Task.Delay(new TimeSpan(1, 0, 0, 0));
         }
 
-        public static async Task LoadWorks(List<WorkTask> worksList)
+        public static async Task LoadWorksAsync(List<WorkTask> worksList)
         {
             try
             {
@@ -307,7 +309,7 @@ namespace Insta.Working
                         workUser.SetHashtag(work.Hashtag);
                         workUser.SetDuration(work.LowerDelay, work.UpperDelay);
                         workUser.SetMode(work.Mode);
-                        await workUser.StartAtTime(work.StartTime, work);
+                        await workUser.StartAtTimeAsync(work.StartTime, work);
                     }
                     catch
                     {
