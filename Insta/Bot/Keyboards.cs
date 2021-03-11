@@ -113,13 +113,12 @@ namespace Insta.Bot
             return new(InlineKeyboardButton.WithCallbackData("🛑 Отменить", $"cancel_{id}"));
         }
 
-        public static InlineKeyboardMarkup Exit(long id)
+        public static InlineKeyboardMarkup Exit(long id, bool addExit = true)
         {
-            return new(new List<InlineKeyboardButton>
-            {
-                InlineKeyboardButton.WithCallbackData("🚪 Выйти", $"exit_{id}"),
-                InlineKeyboardButton.WithCallbackData("♻ Перезайти", $"reLogIn_{id}")
-            });
+            var keyboard = new List<InlineKeyboardButton>();
+            if(addExit)keyboard.Add(InlineKeyboardButton.WithCallbackData("🚪 Выйти", $"exit_{id}"));
+            keyboard.Add(InlineKeyboardButton.WithCallbackData("♻ Перезайти", $"reLogIn_{id}"));
+            return new InlineKeyboardMarkup(keyboard);
         }
 
         public static InlineKeyboardMarkup CheckBill(string id)

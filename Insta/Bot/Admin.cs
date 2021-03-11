@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using Insta.Entities;
+using Insta.Enums;
 using Telegram.Bot.Args;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
@@ -18,7 +19,7 @@ namespace Insta.Bot
                 if (e.Message.From.Id != 346978522 && e.Message.From.Id != 921976182) return;
                 User user = MainBot.Users.ToList().FirstOrDefault(x => x.Id == e.Message.From.Id);
                 if (user == null) return;
-                if (user.state == User.State.mailingAdmin && e.Message.Text != "/mailing" &&
+                if (user.State == State.mailingAdmin && e.Message.Text != "/mailing" &&
                     e.Message.Text != "/subscribes")
                 {
                     SendMessageToUsers(e.Message, user);
@@ -29,45 +30,45 @@ namespace Insta.Bot
                 switch (e.Message.Text)
                 {
                     case "/mailing":
-                        if (user.state == User.State.main || user.state == User.State.subscribesAdmin)
+                        if (user.State == State.main || user.State == State.subscribesAdmin)
                         {
                             await MainBot.Tgbot.SendTextMessageAsync(user.Id, "Добро пожаловать в панель рассылки.",
                                 replyMarkup: new ReplyKeyboardRemove());
                             await MainBot.Tgbot.SendTextMessageAsync(user.Id,
                                 "Введите сообщение, которое хотите разослать.",
                                 replyMarkup: Keyboards.Main);
-                            user.state = User.State.mailingAdmin;
+                            user.State = State.mailingAdmin;
                         }
                         else
                         {
                             await MainBot.Tgbot.SendTextMessageAsync(user.Id, "Вы вышли из панели рассылки.",
                                 replyMarkup: Keyboards.MainKeyboard);
-                            user.state = User.State.main;
+                            user.State = State.main;
                         }
 
                         break;
                     case "/subscribes":
-                        if (user.state == User.State.main || user.state == User.State.mailingAdmin)
+                        if (user.State == State.main || user.State == State.mailingAdmin)
                         {
                             await MainBot.Tgbot.SendTextMessageAsync(user.Id, "Добро пожаловать в панель подписок.",
                                 replyMarkup: new ReplyKeyboardRemove());
                             await MainBot.Tgbot.SendTextMessageAsync(user.Id,
                                 "Введите id человека и дату окончания подписки (111111111 11.11.2011).\nДля стандартного времени действия введите \"s\" (111111111 s).",
                                 replyMarkup: Keyboards.Main);
-                            user.state = User.State.subscribesAdmin;
+                            user.State = State.subscribesAdmin;
                         }
                         else
                         {
                             await MainBot.Tgbot.SendTextMessageAsync(user.Id, "Вы вышли из панели рассылки.",
                                 replyMarkup: Keyboards.MainKeyboard);
-                            user.state = User.State.main;
+                            user.State = State.main;
                         }
 
                         break;
                     default:
-                        switch (user.state)
+                        switch (user.State)
                         {
-                            case User.State.subscribesAdmin:
+                            case State.subscribesAdmin:
                             {
                                 string[] data = e.Message.Text.Split(' ');
                                 if (data.Length != 2)
@@ -116,7 +117,7 @@ namespace Insta.Bot
                                 await MainBot.Tgbot.SendTextMessageAsync(user.Id,
                                     "Успешно. Вы в главном меню.",
                                     replyMarkup: Keyboards.MainKeyboard);
-                                user.state = User.State.main;
+                                user.State = State.main;
                                 await MainBot.Tgbot.SendTextMessageAsync(user2.Id,
                                     $"Администратор активировал вам подписку до {date:D}");
                                 break;
@@ -245,7 +246,7 @@ namespace Insta.Bot
                 await MainBot.Tgbot.SendTextMessageAsync(user.Id,
                     "Сообщение было успешно отправлено. Вы в главном меню.",
                     replyMarkup: Keyboards.MainKeyboard);
-                user.state = User.State.main;
+                user.State = State.main;
             }
             catch
             {

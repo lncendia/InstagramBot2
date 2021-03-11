@@ -1,5 +1,5 @@
-﻿using Insta.Working;
-using System;
+﻿using System;
+using Insta.Enums;
 
 namespace Insta.Entities
 {
@@ -10,7 +10,7 @@ namespace Insta.Entities
         public string Hashtag { get; set; }
         public int LowerDelay { get; set; }
         public int UpperDelay { get; set; }
-        public Work.Mode Mode { get; set; }
+        public Mode Mode { get; set; }
         public DateTime StartTime { get; set; }
     }
 }

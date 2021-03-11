@@ -7,8 +7,6 @@ namespace Insta
 {
     internal static class Program
     {
-        public const string Token = "1485092461:AAGcPpPwxfSTnQ8cM3FWPFirvGIDjs84Pto";
-
         static async Task Main(string[] args)
         {
             await MainBot.Start();

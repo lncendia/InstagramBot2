@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using System.Timers;
 using Insta.Bot;
 using Insta.Entities;
+using Insta.Enums;
 using InstagramApiSharp;
 using InstagramApiSharp.Classes;
 using Telegram.Bot;
@@ -23,32 +24,16 @@ namespace Insta.Working
         private int UpperDelay { get; set; }
         private Timer Timer { get; set; }
         private User Owner { get; }
+        private WorkTask _works;
+        public bool IsStarted { get; private set; }
 
-        private static readonly TelegramBotClient Tgbot =
-            new(Program.Token);
+        private static readonly TelegramBotClient Tgbot = BotSettings.Get();
 
         private static readonly Random Rnd = new();
 
         private int _countLike, _countSave, _countFollow;
 
-        public enum Mode
-        {
-            like,
-            save,
-            follow,
-            likeAndSave
-        }
-
-        private enum Stop
-        {
-            ok,
-            limit,
-            logOut,
-            proxyError,
-            anotherError
-        }
-
-        private Mode mode;
+        private Mode _mode;
         public readonly CancellationTokenSource CancelTokenSource = new();
 
         public Work(int id, Instagram inst, User user)
@@ -61,7 +46,7 @@ namespace Insta.Working
 
         public void SetMode(Mode mode)
         {
-            this.mode = mode;
+            _mode = mode;
         }
 
         public void SetHashtag(string hashtag)
@@ -75,6 +60,13 @@ namespace Insta.Working
             UpperDelay = ud;
         }
 
+        private int _iterator;
+        private int _countPosts;
+        public string GetInformation()
+        {
+            if(!IsStarted) return String.Empty;
+            return _countPosts == 0 ? "Получение публикаций..." : $"Постов обработано: {_iterator}/{_countPosts}.";
+        }
         public async Task StartAtTimeAsync(DateTime time)
         {
             try
@@ -112,8 +104,6 @@ namespace Insta.Working
             }
         }
 
-        private WorkTask _works;
-
         public async Task TimerDisposeAsync()
         {
             try
@@ -134,13 +124,13 @@ namespace Insta.Working
             await StartAsync();
         }
 
-        public bool IsStarted { get; private set; }
-
+        private int _countNetworkProblems;
         public async Task StartAsync()
         {
             try
             {
                 IsStarted = true;
+
                 if (Instagram.Api == null)
                 {
                     await SendMessageStopAsync(Stop.logOut, message: "logOut");
@@ -176,15 +166,17 @@ namespace Insta.Working
                     return;
                 }
 
-                foreach (var post in posts.Value.Medias)
+                _countPosts = posts.Value.Medias.Count;
+                for (_iterator = 0; _iterator < _countPosts; _iterator++)
                 {
+                    var post = posts.Value.Medias[_iterator];
                     if (CancelTokenSource.IsCancellationRequested)
                     {
                         await SendMessageStopAsync(Stop.ok);
                         return;
                     }
 
-                    switch (mode)
+                    switch (_mode)
                     {
                         case Mode.like:
                             if (post.HasLiked) continue;
@@ -254,6 +246,8 @@ namespace Insta.Working
                             return false;
                         }
                     case ResponseType.NetworkProblem:
+                        _countNetworkProblems++;
+                        if (_countNetworkProblems < 10) return true;
                         if (result.Exception is HttpRequestException)
                         {
                             Operation.CheckProxy(Instagram.Proxy);
@@ -263,7 +257,6 @@ namespace Insta.Working
                         {
                             await SendMessageStopAsync(Stop.anotherError, result.ResponseType.ToString());
                         }
-
                         return false;
                     default:
                         await SendMessageStopAsync(Stop.anotherError, result.ResponseType.ToString());
@@ -299,7 +292,7 @@ namespace Insta.Working
             {
                 Owner.Works.Remove(this);
                 string result = String.Empty;
-                switch (mode)
+                switch (_mode)
                 {
                     case Mode.like:
                         result = $"\nЛайков поставлено: {_countLike}";
@@ -327,7 +320,7 @@ namespace Insta.Working
                         break;
                     case Stop.limit:
                         await Tgbot.SendTextMessageAsync(Owner.Id,
-                            $"🏁 Отработка завершена с ошибкой. Аккаунт {Instagram.Username}. Хештег #{Hashtag}. Вы достигли ограничения.{result}");
+                            $"🏁 Отработка завершена с ошибкой. Аккаунт {Instagram.Username}. Хештег #{Hashtag}. Вы достигли ограничения.{result}.\nПерезаход в аккаунт завершит все запущенные на нем отработки.", replyMarkup:Keyboards.Exit(Instagram.Id,false));
                         break;
                     case Stop.logOut:
                         await Tgbot.SendTextMessageAsync(Owner.Id,

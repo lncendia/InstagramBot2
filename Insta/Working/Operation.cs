@@ -4,6 +4,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
+using Insta.Bot;
 using Insta.Entities;
 using InstagramApiSharp.API;
 using InstagramApiSharp.API.Builder;
@@ -18,7 +19,9 @@ namespace Insta.Working
     {
         private static List<Proxy> _proxies;
         private static int _number;
+        private static readonly TelegramBotClient Tgbot = BotSettings.Get();
         private static readonly object Locker = new();
+        
 
         private static IWebProxy GetProxy(Instagram instagram)
         {
@@ -119,7 +122,7 @@ namespace Insta.Working
             return true;
         }
 
-        public static async Task<IResult<InstaLoginResult>> CheckLoginAsync(Instagram instagram)
+        public static async Task<IResult<InstaLoginResult>> CheckLoginAsync(Instagram instagram, bool isAccepted = false)
         {
             try
             {
@@ -128,11 +131,20 @@ namespace Insta.Working
                     UserName = instagram.Username,
                     Password = instagram.Password
                 };
+                IWebProxy proxy;
+                if (isAccepted && instagram.Proxy != null)
+                {
+                    proxy = new WebProxy(instagram.Proxy.Host, instagram.Proxy.Port)
+                    {
+                        UseDefaultCredentials = false,
+                        Credentials = new NetworkCredential(instagram.Proxy.Login, instagram.Proxy.Password)
+                    };
+                }
+                else proxy = GetProxy(instagram);
                 var instaApi = InstaApiBuilder.CreateBuilder()
-                    .UseHttpClientHandler(new HttpClientHandler {Proxy = GetProxy(instagram)})
+                    .UseHttpClientHandler(new HttpClientHandler {Proxy = proxy})
                     .SetUser(userSession)
                     .Build();
-                if (instaApi.IsUserAuthenticated) return null;
                 var logInResult = await instaApi.LoginAsync();
                 if (logInResult.Value == InstaLoginResult.Success && !logInResult.Succeeded) return null;
                 instagram.Api = instaApi;
@@ -225,21 +237,20 @@ namespace Insta.Working
             }
         }
 
-        private static readonly TelegramBotClient Tgbot =
-            new(Program.Token);
-
         public static async void CheckSubscribeAsync(List<User> users)
         {
             while (true)
             {
                 try
                 {
+                    int count = 0;
                     await using Db db = new Db();
                     foreach (var user in users)
                     {
                         var accounts = user.Instagrams.ToList().Where(x => !x.IsDeactivated).ToList();
                         var overdue = user.Subscribes.ToList()
                             .Where(subscribe => subscribe.EndSubscribe.CompareTo(DateTime.Now) <= 0).ToList();
+                        count += overdue.Count;
                         foreach (var subscribe in overdue)
                         {
                             db.UpdateRange(user, subscribe);
@@ -277,12 +288,12 @@ namespace Insta.Working
                     }
 
                     await db.SaveChangesAsync();
-                    Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] Произведена проверка подписок\n");
+                    Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] Произведена проверка подписок. Подписок удалено: {count}.\n");
                     await Task.Delay(new TimeSpan(1, 0, 0, 0));
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] Ошибка при проверке подписовк {ex.Message}\n");
+                    Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] Ошибка при проверке подписовк. {ex.Message}\n");
                 }
             }
         }
