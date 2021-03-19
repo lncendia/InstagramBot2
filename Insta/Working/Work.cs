@@ -6,8 +6,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Timers;
 using Insta.Bot;
-using Insta.Entities;
 using Insta.Enums;
+using Insta.Model;
 using InstagramApiSharp;
 using InstagramApiSharp.Classes;
 using Telegram.Bot;
@@ -22,6 +22,7 @@ namespace Insta.Working
         public string Hashtag { get; private set; }
         private int LowerDelay { get; set; }
         private int UpperDelay { get; set; }
+        private int Offset { get; set; }
         private Timer Timer { get; set; }
         private User Owner { get; }
         private WorkTask _works;
@@ -60,6 +61,10 @@ namespace Insta.Working
             UpperDelay = ud;
         }
 
+        public void SetOffset(int offset)
+        {
+            Offset = offset;
+        }
         private int _iterator;
         private int _countPosts;
         public string GetInformation()
@@ -85,7 +90,7 @@ namespace Insta.Working
             }
             catch (Exception ex)
             {
-                await SendMessageStopAsync(Stop.anotherError, message: ex.Message);
+                await SendMessageStopAsync(Stop.anotherError, ex.Message);
             }
 
         }
@@ -100,7 +105,7 @@ namespace Insta.Working
             }
             catch (Exception ex)
             {
-                await SendMessageStopAsync(Stop.anotherError, message: ex.Message);
+                await SendMessageStopAsync(Stop.anotherError, ex.Message);
             }
         }
 
@@ -167,7 +172,7 @@ namespace Insta.Working
                 }
 
                 _countPosts = posts.Value.Medias.Count;
-                for (_iterator = 0; _iterator < _countPosts; _iterator++)
+                for (_iterator = Offset; _iterator < _countPosts; _iterator++)
                 {
                     var post = posts.Value.Medias[_iterator];
                     if (CancelTokenSource.IsCancellationRequested)

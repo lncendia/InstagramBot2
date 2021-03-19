@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
-using Insta.Entities;
+using Insta.Model;
 using Microsoft.EntityFrameworkCore;
 
 namespace Insta

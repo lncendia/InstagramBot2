@@ -4,7 +4,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 using Insta.Enums;
 using Insta.Working;
 
-namespace Insta.Entities
+namespace Insta.Model
 {
     public class User
     {

@@ -3,8 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
-using Insta.Entities;
 using Insta.Enums;
+using Insta.Model;
 using Insta.Working;
 using InstagramApiSharp.Classes;
 using Microsoft.EntityFrameworkCore;
@@ -561,12 +561,11 @@ namespace Insta.Bot
                         {
                             user.Works.Remove(work);
                         }
-
                         user.CurrentWorks.Clear();
                         user.EnterData = null;
                         user.State = State.main;
                         await Tgbot.SendTextMessageAsync(message.From.Id,
-                            "Вы в главном меню.");
+                            "Вы в главном меню.", replyMarkup:Keyboards.Main);
                         break;
                     case "🌇 Мои аккаунты":
                         if (user.State != State.main) return;

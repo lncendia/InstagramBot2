@@ -1,4 +1,4 @@
-﻿namespace Insta.Entities
+﻿namespace Insta.Model
 {
     public class Proxy
     {

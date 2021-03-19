@@ -1,7 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations.Schema;
 using InstagramApiSharp.API;
 
-namespace Insta.Entities
+namespace Insta.Model
 {
     public class Instagram
     {

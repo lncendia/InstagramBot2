@@ -1,12 +1,12 @@
 ﻿using System;
 using System.Linq;
-using Insta.Entities;
 using Insta.Enums;
+using Insta.Model;
 using Telegram.Bot.Args;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types.ReplyMarkups;
-using User = Insta.Entities.User;
+using User = Insta.Model.User;
 
 namespace Insta.Bot
 {

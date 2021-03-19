@@ -1,9 +1,9 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
-using Insta.Entities;
+using Insta.Model;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.ReplyMarkups;
-using User = Insta.Entities.User;
+using User = Insta.Model.User;
 
 namespace Insta.Bot
 {
@@ -44,7 +44,15 @@ namespace Insta.Bot
                 new() {InlineKeyboardButton.WithCallbackData("➕ Подписки", "startFollowing")},
                 new() {InlineKeyboardButton.WithCallbackData("⭐ В главное меню", "mainMenu")}
             });
-
+        public static readonly InlineKeyboardMarkup SetOffset = new(
+            new List<List<InlineKeyboardButton>>
+            {
+                new()
+                {
+                    InlineKeyboardButton.WithCallbackData("➡ С последнего поста", "lastPost"),
+                    InlineKeyboardButton.WithCallbackData("↪ Ввести сдвиг", "setOffset")
+                }
+            });
         public static readonly InlineKeyboardMarkup StartWork = new(
             new List<List<InlineKeyboardButton>>
             {
@@ -97,17 +105,7 @@ namespace Insta.Bot
             return new InlineKeyboardMarkup(
                 InlineKeyboardButton.WithCallbackData("♻ Сменить прокси", $"changeProxy_{instagram.Id}"));
         }
-
-        public static InlineKeyboardMarkup ChangeProxyAndExit(Instagram instagram)
-        {
-            if (instagram == null) return null;
-            return new InlineKeyboardMarkup(new List<InlineKeyboardButton>
-            {
-                InlineKeyboardButton.WithCallbackData("♻ Сменить прокси", $"changeProxy_{instagram.Id}"),
-                InlineKeyboardButton.WithCallbackData("🚪 Выйти", $"exit_{instagram.Id}")
-            });
-        }
-
+        
         public static InlineKeyboardMarkup Cancel(long id)
         {
             return new(InlineKeyboardButton.WithCallbackData("🛑 Отменить", $"cancel_{id}"));

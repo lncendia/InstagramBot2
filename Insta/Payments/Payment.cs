@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Linq;
-using Insta.Entities;
+using Insta.Model;
 using Newtonsoft.Json.Linq;
 using Qiwi.BillPayments.Client;
 using Qiwi.BillPayments.Model;

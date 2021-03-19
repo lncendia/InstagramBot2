@@ -24,4 +24,9 @@
     <None Remove="users.sqlite" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Bot\CallbackQueryCommands" />
+    <Folder Include="Interfaces" />
+  </ItemGroup>
+
 </Project>

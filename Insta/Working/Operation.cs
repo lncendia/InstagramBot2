@@ -5,7 +5,7 @@ using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Insta.Bot;
-using Insta.Entities;
+using Insta.Model;
 using InstagramApiSharp.API;
 using InstagramApiSharp.API.Builder;
 using InstagramApiSharp.Classes;
@@ -132,6 +132,7 @@ namespace Insta.Working
                     Password = instagram.Password
                 };
                 IWebProxy proxy;
+                    //TODO: Сделать проверку на default в прокси.
                 if (isAccepted && instagram.Proxy != null)
                 {
                     proxy = new WebProxy(instagram.Proxy.Host, instagram.Proxy.Port)
@@ -144,6 +145,7 @@ namespace Insta.Working
                 var instaApi = InstaApiBuilder.CreateBuilder()
                     .UseHttpClientHandler(new HttpClientHandler {Proxy = proxy})
                     .SetUser(userSession)
+                    .UseLogger(new DebugLogger(LogLevel.All))
                     .Build();
                 var logInResult = await instaApi.LoginAsync();
                 if (logInResult.Value == InstaLoginResult.Success && !logInResult.Succeeded) return null;

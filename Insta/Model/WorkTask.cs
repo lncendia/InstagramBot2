@@ -1,7 +1,7 @@
 ﻿using System;
 using Insta.Enums;
 
-namespace Insta.Entities
+namespace Insta.Model
 {
     public class WorkTask
     {
