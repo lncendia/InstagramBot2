@@ -7,9 +7,9 @@ namespace Insta
 {
     internal static class Program
     {
-        static async Task Main(string[] args)
+        static void Main(string[] args)
         {
-            await MainBot.Start();
+            MainBot.Start();
             Console.WriteLine("The bot has started. Press any key to exit.");
             Console.ReadKey();
         }

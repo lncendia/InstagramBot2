@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using Insta.Model;
 using Telegram.Bot.Types;
@@ -44,15 +45,21 @@ namespace Insta.Bot
                 new() {InlineKeyboardButton.WithCallbackData("➕ Подписки", "startFollowing")},
                 new() {InlineKeyboardButton.WithCallbackData("⭐ В главное меню", "mainMenu")}
             });
+
         public static readonly InlineKeyboardMarkup SetOffset = new(
             new List<List<InlineKeyboardButton>>
             {
                 new()
                 {
-                    InlineKeyboardButton.WithCallbackData("➡ С последнего поста", "lastPost"),
-                    InlineKeyboardButton.WithCallbackData("↪ Ввести сдвиг", "setOffset")
+                    InlineKeyboardButton.WithCallbackData("➡ С последнего", "lastPost"),
+                    InlineKeyboardButton.WithCallbackData("↪ Ввести номер поста", "setOffset")
+                },
+                new()
+                {
+                    InlineKeyboardButton.WithCallbackData("🔙 Назад", "back")
                 }
             });
+        
         public static readonly InlineKeyboardMarkup StartWork = new(
             new List<List<InlineKeyboardButton>>
             {
@@ -69,7 +76,7 @@ namespace Insta.Bot
         {
             List<List<InlineKeyboardButton>> accounts = user.Instagrams.Select(inst => new List<InlineKeyboardButton>()
             {
-                InlineKeyboardButton.WithCallbackData($"{Emodji[MainBot.Rnd.Next(0, Emodji.Length)]} {inst.Username}",
+                InlineKeyboardButton.WithCallbackData($"{Emodji[new Random().Next(0, Emodji.Length)]} {inst.Username}",
                     $"select_{inst.Id}")
             }).ToList();
 

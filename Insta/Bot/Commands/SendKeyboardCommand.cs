@@ -8,7 +8,7 @@ using User = Insta.Model.User;
 
 namespace Insta.Bot.Commands
 {
-    public class InstructionCommand : ITextCommand
+    public class SendKeyboardCommand:ITextCommand
     {
         public async Task Execute(TelegramBotClient client, User user, Message message)
         {
@@ -16,13 +16,13 @@ namespace Insta.Bot.Commands
             user.CurrentWorks.Clear();
             user.EnterData = null;
             user.State = State.main;
-            await client.SendTextMessageAsync(message.Chat.Id,
-                "Всю инструкцию вы можете прочитать в канале @likebotgid.");
+            await client.SendTextMessageAsync(message.From.Id,
+                "Вы в главном меню.", replyMarkup:Keyboards.MainKeyboard);
         }
 
         public bool Compare(Message message, User user)
         {
-            return message.Type == MessageType.Text && message.Text == "📄 Инструкция" && user.State != State.block;
+            return message.Type == MessageType.Text && message.Text == "/start" && user.State != State.block;
         }
     }
 }

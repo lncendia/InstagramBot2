@@ -9,34 +9,26 @@ using User = Insta.Model.User;
 
 namespace Insta.Bot.Commands
 {
-    public class EnterPasswordCommand : ITextCommand
+    public class EnterChallengeRequireCodeCommand : ITextCommand
     {
         public async Task Execute(TelegramBotClient client, User user, Message message)
         {
-            if (message.Text.Length < 6)
-            {
-                await client.SendTextMessageAsync(message.Chat.Id,
-                    "Пароль не может быть меньше 6 символов!");
-                return;
-            }
-
-            user.State = State.block;
-            user.EnterData.Password = message.Text;
-            var login = await Operation.CheckLoginAsync(user.EnterData);
-            if (await MainBot.Login(user, login))
+            var y = await Operation.SendCodeChallengeRequiredAsync(user.EnterData.Api,
+                message.Text);
+            if (await MainBot.Login(user, y))
             {
                 await using Db db = new Db();
                 db.Update(user);
                 db.Add(user.EnterData);
                 user.EnterData = null;
-                user.State = State.main;
                 await db.SaveChangesAsync();
             }
+
         }
 
         public bool Compare(Message message, User user)
         {
-            return message.Type == MessageType.Text && user.State == State.enterPassword;
+            return message.Type == MessageType.Text && user.State == State.challengeRequiredAccept;
         }
     }
 }

@@ -42,7 +42,7 @@ namespace Insta.Working
                 }
                 catch
                 {
-                    instagram.Proxy = new Proxy() {Host = "default", Port = 0000};
+                    instagram.Proxy = new Proxy() {Host = "default", Port = 0};
                     return new WebProxy();
                 }
             }
@@ -132,8 +132,7 @@ namespace Insta.Working
                     Password = instagram.Password
                 };
                 IWebProxy proxy;
-                    //TODO: Сделать проверку на default в прокси.
-                if (isAccepted && instagram.Proxy != null)
+                if (isAccepted && instagram.Proxy != null && instagram.Proxy.Host != "default")
                 {
                     proxy = new WebProxy(instagram.Proxy.Host, instagram.Proxy.Port)
                     {
@@ -145,7 +144,6 @@ namespace Insta.Working
                 var instaApi = InstaApiBuilder.CreateBuilder()
                     .UseHttpClientHandler(new HttpClientHandler {Proxy = proxy})
                     .SetUser(userSession)
-                    .UseLogger(new DebugLogger(LogLevel.All))
                     .Build();
                 var logInResult = await instaApi.LoginAsync();
                 if (logInResult.Value == InstaLoginResult.Success && !logInResult.Succeeded) return null;
@@ -322,6 +320,7 @@ namespace Insta.Working
                         workUser.SetHashtag(work.Hashtag);
                         workUser.SetDuration(work.LowerDelay, work.UpperDelay);
                         workUser.SetMode(work.Mode);
+                        workUser.SetOffset(work.Offset);
                         await workUser.StartAtTimeAsync(work.StartTime, work);
                     }
                     catch

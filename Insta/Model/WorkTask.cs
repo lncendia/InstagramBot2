@@ -10,6 +10,7 @@ namespace Insta.Model
         public string Hashtag { get; set; }
         public int LowerDelay { get; set; }
         public int UpperDelay { get; set; }
+        public int Offset { get; set; }
         public Mode Mode { get; set; }
         public DateTime StartTime { get; set; }
     }

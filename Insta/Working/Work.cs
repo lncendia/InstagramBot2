@@ -1,7 +1,5 @@
 ﻿using System;
-using System.Diagnostics;
 using System.Net.Http;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Timers;
@@ -65,12 +63,13 @@ namespace Insta.Working
         {
             Offset = offset;
         }
+        
         private int _iterator;
         private int _countPosts;
         public string GetInformation()
         {
             if(!IsStarted) return String.Empty;
-            return _countPosts == 0 ? "Получение публикаций..." : $"Постов обработано: {_iterator}/{_countPosts}.";
+            return _countPosts == 0 ? "Получение публикаций..." : $"Постов обработано: {_iterator-Offset}/{_countPosts-Offset}.";
         }
         public async Task StartAtTimeAsync(DateTime time)
         {
@@ -82,7 +81,7 @@ namespace Insta.Working
                 _works = new WorkTask
                 {
                     Hashtag = Hashtag, Instagram = Instagram, LowerDelay = LowerDelay, UpperDelay = UpperDelay,
-                    StartTime = time
+                    StartTime = time, Offset = Offset
                 };
                 db.Update(Instagram);
                 db.Add(_works);
@@ -119,7 +118,7 @@ namespace Insta.Working
             }
             catch
             {
-                await SendMessageStopAsync(Stop.anotherError, message: "Timer stop failed");
+                await SendMessageStopAsync(Stop.anotherError, "Timer stop failed");
             }
         }
 
@@ -138,7 +137,7 @@ namespace Insta.Working
 
                 if (Instagram.Api == null)
                 {
-                    await SendMessageStopAsync(Stop.logOut, message: "logOut");
+                    await SendMessageStopAsync(Stop.logOut, "logOut");
                     return;
                 }
 
@@ -147,7 +146,7 @@ namespace Insta.Working
                     PaginationParameters.MaxPagesToLoad(34));
                 if (posts.Info.ResponseType == ResponseType.LoginRequired)
                 {
-                    await SendMessageStopAsync(Stop.logOut, message: "logOut");
+                    await SendMessageStopAsync(Stop.logOut, "logOut");
                     return;
                 }
 
@@ -172,6 +171,11 @@ namespace Insta.Working
                 }
 
                 _countPosts = posts.Value.Medias.Count;
+                if (Offset > _countPosts)
+                {
+                    await SendMessageStopAsync(Stop.wrongOffset, "Неверный номер поста");
+                    return;
+                }
                 for (_iterator = Offset; _iterator < _countPosts; _iterator++)
                 {
                     var post = posts.Value.Medias[_iterator];
@@ -296,21 +300,17 @@ namespace Insta.Working
             try
             {
                 Owner.Works.Remove(this);
-                string result = String.Empty;
-                switch (_mode)
+                var result = _mode switch
                 {
-                    case Mode.like:
-                        result = $"\nЛайков поставлено: {_countLike}";
-                        break;
-                    case Mode.save:
-                        result = $"\nСохранено постов: {_countSave}";
-                        break;
-                    case Mode.follow:
-                        result = $"\nПодписок сделано: {_countFollow}";
-                        break;
-                    case Mode.likeAndSave:
-                        result = $"\nЛайков поставлено: {_countLike}\nСохранено постов: {_countSave}";
-                        break;
+                    Mode.like => $"\nЛайков поставлено: {_countLike}",
+                    Mode.save => $"\nСохранено постов: {_countSave}",
+                    Mode.follow => $"\nПодписок сделано: {_countFollow}",
+                    Mode.likeAndSave => $"\nЛайков поставлено: {_countLike}\nСохранено постов: {_countSave}",
+                    _ => String.Empty
+                };
+                if (IsStarted && _countPosts != 0 && stop != Stop.wrongOffset)
+                {
+                    result += $"\nВсего постов: {_countPosts - Offset}";
                 }
 
                 var log = stop == Stop.ok
@@ -341,6 +341,10 @@ namespace Insta.Working
                         await Tgbot.SendTextMessageAsync(Owner.Id,
                             $"🏁 Отработка завершена с ошибкой ({message}). Аккаунт {Instagram.Username}. Хештег #{Hashtag}.{result}");
                         break;
+                    case Stop.wrongOffset:
+                        await Tgbot.SendTextMessageAsync(Owner.Id,
+                            $"🏁 Отработка завершена с ошибкой ({message}). Аккаунт {Instagram.Username}. Хештег #{Hashtag}.{result}");
+                        break;
                 }
 
                 if (_works != null)
@@ -358,28 +362,9 @@ namespace Insta.Working
                     }
                 }
             }
-            catch (Exception e)
+            catch
             {
-                try
-                {
-                    await Tgbot.SendTextMessageAsync(346978522, $"[{DateTime.Now}]: Ошибка у {Owner.Id} {e.Message}");
-                    await Tgbot.SendTextMessageAsync(346978522, $"StackTrace: {e.StackTrace}");
-                    var trace = new StackTrace(e, true);
-
-                    foreach (var frame in trace.GetFrames())
-                    {
-                        var sb = new StringBuilder();
-                        sb.AppendLine($"Файл: {frame.GetFileName()}");
-                        sb.AppendLine($"Строка: {frame.GetFileLineNumber()}");
-                        sb.AppendLine($"Столбец: {frame.GetFileColumnNumber()}");
-                        sb.AppendLine($"Метод: {frame.GetMethod()}");
-                        await Tgbot.SendTextMessageAsync(346978522, sb.ToString());
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"Ошибка при обработке исключения!!! {e.Message}\n{ex.Message}");
-                }
+                //ignored
             }
         }
     }

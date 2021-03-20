@@ -5,6 +5,7 @@
         ok,
         limit,
         logOut,
+        wrongOffset,
         proxyError,
         anotherError
     }
