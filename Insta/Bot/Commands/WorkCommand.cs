@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System.Linq;
+using System.Threading.Tasks;
 using Insta.Enums;
 using Insta.Interfaces;
 using Telegram.Bot;

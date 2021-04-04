@@ -12,7 +12,7 @@ namespace Insta.Bot.CallbackQueryCommands
     {
         public async Task Execute(TelegramBotClient client, User user, CallbackQuery query)
         {
-            if (Payment.CheckPay(user, query.Data[5..]))
+            if (new Payment().CheckPay(user, query.Data[5..]))
             {
                 string message = query.Message.Text;
                 message = message.Replace("❌ Статус: Не оплачено", "✔ Статус: Оплачено");
@@ -20,7 +20,24 @@ namespace Insta.Bot.CallbackQueryCommands
                 await client.EditMessageTextAsync(query.From.Id, query.Message.MessageId,
                     message);
                 await client.AnswerCallbackQueryAsync(query.Id, "Успешно оплачено.");
+                if (user.Referal == null) return;
+                await using Db db = new Db();
+                db.UpdateRange(user,user.Referal);
+                user.Referal.Bonus += 60;
+                try
+                {
+                    await client.SendTextMessageAsync(user.Referal.Id,
+                        "По вашей реферальной ссылке перешел пользователь. Вам зачисленно 60 бонусных рублей.");
+                }
+                catch
+                {
+                    //ignored
+                }
+                user.Referal = null;
+                await db.SaveChangesAsync();
+                return;
             }
+
             await client.AnswerCallbackQueryAsync(query.Id, "Не оплачено.");
         }
 

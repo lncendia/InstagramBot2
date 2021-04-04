@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System.Linq;
+using System.Threading.Tasks;
 using Insta.Enums;
 using Insta.Interfaces;
 using Telegram.Bot;
@@ -18,10 +19,11 @@ namespace Insta.Bot.CallbackQueryCommands
             }
 
             await client.DeleteMessageAsync(query.From.Id, query.Message.MessageId);
-            if (user.Instagrams.Count == 0)
+            if (user.Instagrams.Count == 0 && user.Instagrams.All(_=>_.IsDeactivated))
             {
-                await client.SendTextMessageAsync(query.From.Id,
-                    "У вас нет аккаунтов.");
+                await client.SendTextMessageAsync(user.Id,
+                    "У вас нет подходящих аккаунтов."); 
+                return;
             }
 
             await client.SendTextMessageAsync(query.From.Id,

@@ -15,30 +15,30 @@ namespace Insta.Bot
         public static TelegramBotClient Get()
         {
             if (_client != null) return _client;
-            _client = new TelegramBotClient("1682222171:AAGw4CBCJ875NRn1rFnh0sBncYkev5KIa4o");
+            _client = new TelegramBotClient(
+                "1682222171:AAGw4CBCJ875NRn1rFnh0sBncYkev5KIa4o");
             Commands = InitialiseCommands();
             CallbackQueryCommands = InitialiseCallbackQueryCommands();
             using Db db = new Db();
-            Users = db.Users.Include(i => i.Instagrams).Include(i => i.Subscribes).ToList();
+            Users = db.Users.Include(i => i.Instagrams).Include(i => i.Subscribes).Include(_ => _.Referal).ToList();
             Operation.CheckSubscribeAsync(Users);
             Operation.LoadProxy(db.Proxies.ToList());
             Operation.LoadUsersStateDataAsync(db.Instagrams.Include(i => i.User).ToList()).Wait();
             Operation.LoadWorksAsync(db.Works.Include(_ => _.Instagram).ToList()).Wait();
             return _client;
-
         }
 
         private static List<ITextCommand> InitialiseCommands()
         {
             return new()
             {
+                new StartCommand(),
                 new AccountsCommand(),
                 new HelpCommand(),
                 new InstructionCommand(),
-                new MyPaymentCommand(),
+                new ProfileCommand(),
                 new PaymentCommand(),
                 new SendKeyboardCommand(),
-                new StartCommand(),
                 new WorkCommand(),
                 new AdminMailingCommand(),
                 new AdminSubscribesCommand(),
@@ -56,6 +56,7 @@ namespace Insta.Bot
                 new EnterMessageToMailingCommand(),
             };
         }
+
         private static List<ICallbackQueryCommand> InitialiseCallbackQueryCommands()
         {
             return new()
@@ -84,9 +85,11 @@ namespace Insta.Bot
                 new SelectSaveModeQueryCommand(),
                 new SelectLikeModeQueryCommand(),
                 new SelectLikeAndSaveModeQueryCommand(),
-                new StartEnterAccountDataQueryCommand()
+                new StartEnterAccountDataQueryCommand(),
+                new MySubscribesQueryCommand()
             };
         }
+
         public static List<User> Users;
         private static TelegramBotClient _client;
         public static List<ITextCommand> Commands;

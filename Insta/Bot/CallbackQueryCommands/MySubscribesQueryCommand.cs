@@ -1,17 +1,15 @@
 ﻿using System.Linq;
 using System.Threading.Tasks;
-using Insta.Enums;
 using Insta.Interfaces;
 using Telegram.Bot;
 using Telegram.Bot.Types;
-using Telegram.Bot.Types.Enums;
 using User = Insta.Model.User;
 
-namespace Insta.Bot.Commands
+namespace Insta.Bot.CallbackQueryCommands
 {
-    public class MyPaymentCommand : ITextCommand
+    public class MySubscribesQueryCommand:ICallbackQueryCommand
     {
-        public async Task Execute(TelegramBotClient client, User user, Message message)
+        public async Task Execute(TelegramBotClient client, User user, CallbackQuery query)
         {
             string subscribes = $"У вас {user.Subscribes.Count} подписки(ок).\n";
             int i = 0;
@@ -20,14 +18,13 @@ namespace Insta.Bot.Commands
                 i++;
                 subscribes += $"Подписка {i}. Истекает {sub.EndSubscribe:D}\n";
             }
-
-            await client.SendTextMessageAsync(message.Chat.Id,
-                subscribes);
+            await client.EditMessageTextAsync(query.From.Id, query.Message.MessageId, subscribes,
+                replyMarkup: Keyboards.Back("subscribes"));
         }
 
-        public bool Compare(Message message, User user)
+        public bool Compare(CallbackQuery query, User user)
         {
-            return message.Type == MessageType.Text && message.Text == "⏱ Мои подписки" && user.State == State.main;
+            return query.Data == "subscribes";
         }
     }
 }

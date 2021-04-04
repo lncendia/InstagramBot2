@@ -144,12 +144,11 @@ namespace Insta.Working
                 await SendMessageStartAsync();
                 var posts = await Instagram.Api.HashtagProcessor.GetRecentHashtagMediaListAsync(Hashtag,
                     PaginationParameters.MaxPagesToLoad(34));
-                if (posts.Info.ResponseType == ResponseType.LoginRequired)
+                if (CancelTokenSource.IsCancellationRequested)
                 {
-                    await SendMessageStopAsync(Stop.logOut, "logOut");
+                    await SendMessageStopAsync(Stop.ok);
                     return;
                 }
-
                 if (!posts.Succeeded)
                 {
                     if (posts.Info.Exception is HttpRequestException || posts.Info.Exception is NullReferenceException)
@@ -162,11 +161,15 @@ namespace Insta.Working
 
                         await SendMessageStopAsync(Stop.proxyError, "Ошибка прокси");
                     }
+                    else if (posts.Info.ResponseType == ResponseType.LoginRequired)
+                    {
+                        await SendMessageStopAsync(Stop.logOut, "logOut");
+                        return;
+                    }
                     else
                     {
                         await SendMessageStopAsync(Stop.anotherError, message: "Ошибка при загрузке постов");
                     }
-
                     return;
                 }
 
@@ -236,15 +239,15 @@ namespace Insta.Working
                 switch (result.ResponseType)
                 {
                     case ResponseType.Spam:
-                        await SendMessageStopAsync(Stop.limit, message: "limit");
+                        await SendMessageStopAsync(Stop.limit, "limit");
                         return false;
                     case ResponseType.RequestsLimit:
-                        await SendMessageStopAsync(Stop.limit, message: "limit");
+                        await SendMessageStopAsync(Stop.limit, "limit");
                         return false;
                     case ResponseType.OK:
                         return true;
                     case ResponseType.LoginRequired:
-                        await SendMessageStopAsync(Stop.logOut, message: "logOut");
+                        await SendMessageStopAsync(Stop.logOut, "logOut");
                         return false;
                     case ResponseType.UnExpectedResponse:
                         if (Operation.CheckProxy(Instagram.Proxy))

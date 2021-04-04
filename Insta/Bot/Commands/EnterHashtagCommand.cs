@@ -16,7 +16,7 @@ namespace Insta.Bot.Commands
             if (!message.Text.All(_ => char.IsLetterOrDigit(_) || "_".Contains(_)))
             {
                 await client.SendTextMessageAsync(message.From.Id,
-                    "Хештег может содержать только буквы и цифры!", replyMarkup: Keyboards.Main);
+                    "Хештег может содержать только буквы и цифры! Введите хештег заново.", replyMarkup: Keyboards.Back("selectMode"));
                 return;
             }
 
@@ -24,7 +24,7 @@ namespace Insta.Bot.Commands
             user.State = State.setDuration;
             await client.SendTextMessageAsync(message.From.Id,
                 "Введите пределы интервала в секундах. (<strong>Пример:</strong> <em>30:120</em>).\nРекомендуемые параметры нижнего предела:\nНоввый аккаунт: <code>120 секунд.</code>\n3 - 6 месяцев: <code>90 секунд.</code>\nБольше года: <code>72 секунды.</code>\n",
-                replyMarkup: Keyboards.Back, parseMode: ParseMode.Html);
+                replyMarkup: Keyboards.Back("interval"), parseMode: ParseMode.Html);
         }
 
         public bool Compare(Message message, User user)

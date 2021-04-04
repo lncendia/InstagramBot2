@@ -20,7 +20,8 @@ namespace Insta.Bot.Commands
 
         public bool Compare(Message message, User user)
         {
-            return message.Type == MessageType.Text && message.Text == "💰 Оплатить подписку" && user.State == State.main;
+            return message.Type == MessageType.Text && message.Text == "💰 Оплатить подписку" &&
+                   user.State == State.main;
         }
     }
 }

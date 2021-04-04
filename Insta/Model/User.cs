@@ -11,10 +11,13 @@ namespace Insta.Model
         [Key, DatabaseGenerated(DatabaseGeneratedOption.None)]
         public long Id { get; set; }
 
+        public int Bonus { get; set; }
+        public User Referal { get; set; }
+
         public List<Instagram> Instagrams { get; set; } = new();
         public List<Subscribe> Subscribes { get; set; } = new();
-        [NotMapped] public List<Work> Works { get; set; } = new();
-        [NotMapped] public readonly List<Work> CurrentWorks = new();
+        [NotMapped] public List<Work> Works { get; } = new();
+        [NotMapped] public List<Work> CurrentWorks { get; } = new();
         [NotMapped] public Instagram EnterData;
         [NotMapped] public State State;
     }

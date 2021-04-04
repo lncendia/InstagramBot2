@@ -15,35 +15,35 @@ namespace Insta.Bot.Commands
             if (!message.Text.Contains(':'))
             {
                 await client.SendTextMessageAsync(message.From.Id,
-                    "Неверный формат!", replyMarkup: Keyboards.Back);
+                    "Неверный формат!", replyMarkup: Keyboards.Back("offset"));
                 return;
             }
 
             if (!int.TryParse(message.Text.Split(':')[0], out var lowerDelay))
             {
                 await client.SendTextMessageAsync(message.From.Id,
-                    "Неверный формат!", replyMarkup: Keyboards.Back);
+                    "Неверный формат!", replyMarkup: Keyboards.Back("offset"));
                 return;
             }
 
             if (!int.TryParse(message.Text.Split(':')[1], out var upperDelay))
             {
                 await client.SendTextMessageAsync(message.From.Id,
-                    "Неверный формат!", replyMarkup: Keyboards.Back);
+                    "Неверный формат!", replyMarkup: Keyboards.Back("offset"));
                 return;
             }
 
             if (upperDelay < lowerDelay)
             {
                 await client.SendTextMessageAsync(message.From.Id,
-                    "Верхняя граница не может быть больше нижней!", replyMarkup: Keyboards.Back);
+                    "Верхняя граница не может быть больше нижней!", replyMarkup: Keyboards.Back("offset"));
                 return;
             }
 
             if (upperDelay > 300)
             {
                 await client.SendTextMessageAsync(message.From.Id,
-                    "Интервал не может быть больше 5 минут!", replyMarkup: Keyboards.Back);
+                    "Интервал не может быть больше 5 минут!", replyMarkup: Keyboards.Back("offset"));
                 return;
             }
 

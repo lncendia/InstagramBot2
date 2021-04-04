@@ -12,7 +12,7 @@ namespace Insta.Bot.CallbackQueryCommands
         public async Task Execute(TelegramBotClient client, User user, CallbackQuery query)
         {
             await client.DeleteMessageAsync(query.From.Id, query.Message.MessageId);
-            await client.SendTextMessageAsync(user.Id, "Введите сдвиг.", replyMarkup: Keyboards.Back);
+            await client.SendTextMessageAsync(user.Id, "Введите номер поста.", replyMarkup: Keyboards.Back("offsetSelect"));
             user.State = State.enterOffset;
         }
 

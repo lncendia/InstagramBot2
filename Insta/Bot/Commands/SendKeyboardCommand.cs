@@ -22,7 +22,7 @@ namespace Insta.Bot.Commands
 
         public bool Compare(Message message, User user)
         {
-            return message.Type == MessageType.Text && message.Text == "/start" && user.State != State.block;
+            return message.Type == MessageType.Text && message.Text.StartsWith("/start") && user.State != State.block;
         }
     }
 }

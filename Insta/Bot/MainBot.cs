@@ -16,6 +16,7 @@ namespace Insta.Bot
     {
         private static readonly TelegramBotClient Tgbot = BotSettings.Get();
         private static readonly List<User> Users = BotSettings.Users;
+
         public static void Start()
         {
             Tgbot.OnMessage += Tgbot_OnMessage;
@@ -88,16 +89,18 @@ namespace Insta.Bot
                     }
                     case InstaLoginResult.BadPassword:
                         await Tgbot.SendTextMessageAsync(user.Id, "Неверный пароль. Попробуйте ввести снова.",
-                            replyMarkup: Keyboards.Back);
+                            replyMarkup: Keyboards.Back("password"));
                         user.State = State.enterPassword;
                         break;
                     case InstaLoginResult.InvalidUser:
                         user.State = State.main;
+                        user.EnterData = null;
                         await Tgbot.SendTextMessageAsync(user.Id, "Пользователь не найден. Попробуйте еще раз.",
                             replyMarkup: Keyboards.EnterData);
                         break;
                     case InstaLoginResult.LimitError:
                         user.State = State.main;
+                        user.EnterData = null;
                         await Tgbot.SendTextMessageAsync(user.Id,
                             "Слишком много запросов. Подождите несколько минут и попробуйте снова.",
                             replyMarkup: Keyboards.EnterData);
@@ -155,12 +158,19 @@ namespace Insta.Bot
                             login.Info.Exception is NullReferenceException)
                         {
                             Operation.CheckProxy(user.EnterData.Proxy);
-                            await Tgbot.SendTextMessageAsync(user.Id,
-                                "Ошибка при отправке запроса. Возможно проблема с прокси, попробуйте войти ещё раз.");
-                            user.EnterData = null;
-                            user.State = State.main;
                         }
 
+                        await Tgbot.SendTextMessageAsync(user.Id,
+                            "Ошибка при отправке запроса. Попробуйте войти ещё раз.");
+                        user.EnterData = null;
+                        user.State = State.main;
+                        break;
+
+                    default:
+                        await Tgbot.SendTextMessageAsync(user.Id,
+                            "Ошибка. Попробуйте еще раз!");
+                        user.EnterData = null;
+                        user.State = State.main;
                         break;
                 }
 

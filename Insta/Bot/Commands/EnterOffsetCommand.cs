@@ -15,14 +15,14 @@ namespace Insta.Bot.Commands
             if (!int.TryParse(message.Text, out var offset))
             {
                 await client.SendTextMessageAsync(message.From.Id,
-                    "Неверный формат!", replyMarkup: Keyboards.Back);
+                    "Неверный формат!", replyMarkup: Keyboards.Back("offsetSelect"));
                 return;
             }
 
             if (offset > 1020)
             {
                 await client.SendTextMessageAsync(message.From.Id,
-                    "Слишком большой сдвиг!", replyMarkup: Keyboards.Back);
+                    "Слишком большой сдвиг!", replyMarkup: Keyboards.Back("offsetSelect"));
                 return;
             }
             user.CurrentWorks.ForEach(_ => _.SetOffset(offset));

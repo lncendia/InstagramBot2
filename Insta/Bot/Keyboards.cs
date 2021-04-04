@@ -13,18 +13,23 @@ namespace Insta.Bot
         public static readonly ReplyKeyboardMarkup MainKeyboard = new(new List<List<KeyboardButton>>
         {
             new() {new KeyboardButton("🌇 Мои аккаунты"), new KeyboardButton("❤ Отработка")},
-            new() {new KeyboardButton("💰 Оплатить подписку"), new KeyboardButton("⏱ Мои подписки")},
+            new() {new KeyboardButton("💰 Оплатить подписку"), new KeyboardButton("🗒 Мой профиль")},
             new() {new KeyboardButton("📄 Инструкция"), new KeyboardButton("🤝 Поддержка")}
-        });
+        }, true);
 
         public static readonly string[] Emodji =
             {"🏞", "🏔", "🏖", "🌋", "🏜", "🏕", "🌎", "🗽", "🌃", "☘", "🐲", "🌸", "🌓", "🍃", "☀", "☁"};
 
-        public static readonly InlineKeyboardMarkup Back =
-            new(InlineKeyboardButton.WithCallbackData("🔙 Назад", "back"));
+        public static InlineKeyboardMarkup Back(string query)
+        {
+            return new(InlineKeyboardButton.WithCallbackData("🔙 Назад", $"back_{query}"));
+        }
 
         public static readonly InlineKeyboardMarkup Main =
             new(InlineKeyboardButton.WithCallbackData("⭐ В главное меню", "mainMenu"));
+
+        public static readonly InlineKeyboardMarkup Subscribes =
+            new(InlineKeyboardButton.WithCallbackData("⏱ Мои подписки", "subscribes"));
 
         public static readonly InlineKeyboardMarkup Working = new(
             new List<List<InlineKeyboardButton>>
@@ -56,10 +61,10 @@ namespace Insta.Bot
                 },
                 new()
                 {
-                    InlineKeyboardButton.WithCallbackData("🔙 Назад", "back")
+                    InlineKeyboardButton.WithCallbackData("🔙 Назад", "back_offset")
                 }
             });
-        
+
         public static readonly InlineKeyboardMarkup StartWork = new(
             new List<List<InlineKeyboardButton>>
             {
@@ -112,7 +117,7 @@ namespace Insta.Bot
             return new InlineKeyboardMarkup(
                 InlineKeyboardButton.WithCallbackData("♻ Сменить прокси", $"changeProxy_{instagram.Id}"));
         }
-        
+
         public static InlineKeyboardMarkup Cancel(long id)
         {
             return new(InlineKeyboardButton.WithCallbackData("🛑 Отменить", $"cancel_{id}"));
@@ -121,7 +126,7 @@ namespace Insta.Bot
         public static InlineKeyboardMarkup Exit(long id, bool addExit = true)
         {
             var keyboard = new List<InlineKeyboardButton>();
-            if(addExit)keyboard.Add(InlineKeyboardButton.WithCallbackData("🚪 Выйти", $"exit_{id}"));
+            if (addExit) keyboard.Add(InlineKeyboardButton.WithCallbackData("🚪 Выйти", $"exit_{id}"));
             keyboard.Add(InlineKeyboardButton.WithCallbackData("♻ Перезайти", $"reLogIn_{id}"));
             return new InlineKeyboardMarkup(keyboard);
         }
@@ -171,5 +176,4 @@ namespace Insta.Bot
             });
         }
     }
-
 }

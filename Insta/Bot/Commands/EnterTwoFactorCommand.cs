@@ -48,7 +48,6 @@ namespace Insta.Bot.Commands
                     user.State = State.main;
                     break;
             }
-
         }
 
         public bool Compare(Message message, User user)

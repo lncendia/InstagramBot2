@@ -17,7 +17,7 @@ namespace Insta.Bot.CallbackQueryCommands
             user.State = State.setDate;
             await client.SendTextMessageAsync(query.From.Id,
                 "Введите время запуска по МСК в формате ЧЧ:мм. (<strong>Пример:</strong> <em>13:30</em>).",
-                replyMarkup: Keyboards.Back, parseMode: ParseMode.Html);
+                replyMarkup: Keyboards.Back("date"), parseMode: ParseMode.Html);
         }
 
         public bool Compare(CallbackQuery query, User user)

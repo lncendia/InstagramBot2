@@ -14,7 +14,7 @@ namespace Insta.Bot.CallbackQueryCommands
             user.CurrentWorks.ForEach(x => x.SetMode(Mode.likeAndSave));
             user.State = State.setHashtag;
             await client.EditMessageTextAsync(query.From.Id, query.Message.MessageId,
-                "Введите хештег без #.", replyMarkup: Keyboards.Back);
+                "Введите хештег без #.", replyMarkup: Keyboards.Back("selectMode"));
         }
 
         public bool Compare(CallbackQuery query, User user)

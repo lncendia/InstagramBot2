@@ -14,33 +14,38 @@ namespace Insta.Bot.Commands
     {
         public async Task Execute(TelegramBotClient client, User user, Message message)
         {
-            int count;
-            if (!int.TryParse(message.Text, out count))
+            if (!int.TryParse(message.Text, out var count))
             {
                 await client.SendTextMessageAsync(message.From.Id,
-                    "Введите число!");
+                    "Введите число!", replyMarkup: Keyboards.Main);
                 return;
             }
 
             if (count > 100)
             {
                 await client.SendTextMessageAsync(message.From.Id,
-                    "Слишком большое количество!");
+                    "Слишком большое количество!", replyMarkup: Keyboards.Main);
                 return;
             }
 
-            user.State = State.main;
             string billId = "";
-            var payUrl = Payment.AddTransaction(count * 120, user, ref billId);
+            int bonus = count * 60 >= user.Bonus ? user.Bonus : count * 60;
+            var payUrl = new Payment().AddTransaction(count * 120 - bonus, user, count, ref billId);
             if (payUrl == null)
             {
                 await client.SendTextMessageAsync(message.From.Id,
-                    "Произошла ошибка при создании счета. Попробуйте еще раз.");
+                    "Произошла ошибка при создании счета. Попробуйте еще раз.", replyMarkup: Keyboards.Main);
                 return;
             }
 
+            await using Db db = new Db();
+            db.Update(user);
+            user.Bonus -= bonus;
+            await db.SaveChangesAsync();
+            user.State = State.main;
+
             await client.SendTextMessageAsync(message.From.Id,
-                $"💸 Оплата подписки на сумму {count * 120} р.\n📆 Дата: {DateTime.Now:dd.MMM.yyyy}\n❌ Статус: Не оплачено.\n\n💳 Оплатите счет по ссылке.\n{payUrl}",
+                $"💸 Оплата подписки на сумму {count * 120}₽ из которых {bonus}₽ списанно с бонусного счета.\n📆 Дата: {DateTime.Now:dd.MMM.yyyy}\n❌ Статус: Не оплачено.\n\n💳 Оплатите счет по ссылке.\n{payUrl}",
                 replyMarkup: Keyboards.CheckBill(billId));
         }
 

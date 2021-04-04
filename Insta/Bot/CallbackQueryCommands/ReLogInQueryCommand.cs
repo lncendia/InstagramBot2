@@ -4,7 +4,6 @@ using Insta.Enums;
 using Insta.Interfaces;
 using Insta.Model;
 using Insta.Working;
-using InstagramApiSharp.Classes;
 using Telegram.Bot;
 using Telegram.Bot.Types;
 using User = Insta.Model.User;

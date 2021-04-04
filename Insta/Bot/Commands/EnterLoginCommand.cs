@@ -24,7 +24,7 @@ namespace Insta.Bot.Commands
             user.EnterData.Username = message.Text;
             user.State = State.enterPassword;
             await client.SendTextMessageAsync(message.Chat.Id,
-                "Теперь введите пароль.", replyMarkup: Keyboards.Back);
+                "Теперь введите пароль.", replyMarkup: Keyboards.Back("password"));
         }
 
         public bool Compare(Message message, User user)

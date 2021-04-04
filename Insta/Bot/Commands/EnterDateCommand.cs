@@ -36,7 +36,7 @@ namespace Insta.Bot.Commands
             else
             {
                 await client.SendTextMessageAsync(message.From.Id,
-                    "Неверный формат времени.");
+                    "Неверный формат времени.", replyMarkup:Keyboards.Back("date"));
             }
         }
 
