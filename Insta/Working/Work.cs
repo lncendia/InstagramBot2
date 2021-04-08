@@ -8,6 +8,7 @@ using Insta.Enums;
 using Insta.Model;
 using InstagramApiSharp;
 using InstagramApiSharp.Classes;
+using InstagramApiSharp.Classes.Models;
 using Telegram.Bot;
 using Timer = System.Timers.Timer;
 
@@ -63,14 +64,18 @@ namespace Insta.Working
         {
             Offset = offset;
         }
-        
+
         private int _iterator;
         private int _countPosts;
+
         public string GetInformation()
         {
-            if(!IsStarted) return String.Empty;
-            return _countPosts == 0 ? "Получение публикаций..." : $"Постов обработано: {_iterator-Offset}/{_countPosts-Offset}.";
+            if (!IsStarted) return String.Empty;
+            return _countPosts == 0
+                ? "Получение публикаций..."
+                : $"Постов обработано: {_iterator - Offset}/{_countPosts - Offset}.";
         }
+
         public async Task StartAtTimeAsync(DateTime time)
         {
             try
@@ -91,7 +96,6 @@ namespace Insta.Working
             {
                 await SendMessageStopAsync(Stop.anotherError, ex.Message);
             }
-
         }
 
         public async Task StartAtTimeAsync(DateTime time, WorkTask task)
@@ -128,17 +132,14 @@ namespace Insta.Working
             await StartAsync();
         }
 
-        private int _countNetworkProblems;
-        public async Task StartAsync()
+        private async Task<IResult<InstaSectionMedia>> GetPosts()
         {
             try
             {
-                IsStarted = true;
-
                 if (Instagram.Api == null)
                 {
                     await SendMessageStopAsync(Stop.logOut, "logOut");
-                    return;
+                    return null;
                 }
 
                 await SendMessageStartAsync();
@@ -147,38 +148,53 @@ namespace Insta.Working
                 if (CancelTokenSource.IsCancellationRequested)
                 {
                     await SendMessageStopAsync(Stop.ok);
-                    return;
                 }
-                if (!posts.Succeeded)
+                else if (posts.Succeeded) return posts;
+                else if (posts.Info.Exception is HttpRequestException || posts.Info.Exception is NullReferenceException)
                 {
-                    if (posts.Info.Exception is HttpRequestException || posts.Info.Exception is NullReferenceException)
-                    {
-                        if (Operation.CheckProxy(Instagram.Proxy))
-                        {
-                            await SendMessageStopAsync(Stop.logOut, message: "logOut");
-                            return;
-                        }
-
-                        await SendMessageStopAsync(Stop.proxyError, "Ошибка прокси");
-                    }
-                    else if (posts.Info.ResponseType == ResponseType.LoginRequired)
+                    if (Operation.CheckProxy(Instagram.Proxy))
                     {
                         await SendMessageStopAsync(Stop.logOut, "logOut");
-                        return;
+                        return null;
                     }
-                    else
-                    {
-                        await SendMessageStopAsync(Stop.anotherError, message: "Ошибка при загрузке постов");
-                    }
-                    return;
+
+                    await SendMessageStopAsync(Stop.proxyError, "Ошибка прокси");
+                }
+                else if (posts.Info.ResponseType == ResponseType.LoginRequired)
+                {
+                    await SendMessageStopAsync(Stop.logOut, "logOut");
+                }
+                else
+                {
+                    await SendMessageStopAsync(Stop.anotherError, "Ошибка при загрузке постов");
                 }
 
+                return null;
+            }
+            catch (Exception ex)
+            {
+                await SendMessageStopAsync(Stop.anotherError, ex.Message);
+                return null;
+            }
+        }
+
+        private int _countNetworkProblems;
+        private bool _pause;
+
+        public async Task StartAsync()
+        {
+            try
+            {
+                IsStarted = true;
+                var posts = await GetPosts();
+                if (posts is null) return;
                 _countPosts = posts.Value.Medias.Count;
                 if (Offset > _countPosts)
                 {
                     await SendMessageStopAsync(Stop.wrongOffset, "Неверный номер поста");
                     return;
                 }
+
                 for (_iterator = Offset; _iterator < _countPosts; _iterator++)
                 {
                     var post = posts.Value.Medias[_iterator];
@@ -239,9 +255,21 @@ namespace Insta.Working
                 switch (result.ResponseType)
                 {
                     case ResponseType.Spam:
+                        if (!_pause)
+                        {
+                            _pause = true;
+                            await Task.Delay(new TimeSpan(0, 5, 0));
+                            return true;
+                        }
                         await SendMessageStopAsync(Stop.limit, "limit");
                         return false;
                     case ResponseType.RequestsLimit:
+                        if (!_pause)
+                        {
+                            _pause = true;
+                            await Task.Delay(new TimeSpan(0, 5, 0));
+                            return true;
+                        }
                         await SendMessageStopAsync(Stop.limit, "limit");
                         return false;
                     case ResponseType.OK:
@@ -269,6 +297,7 @@ namespace Insta.Working
                         {
                             await SendMessageStopAsync(Stop.anotherError, result.ResponseType.ToString());
                         }
+
                         return false;
                     default:
                         await SendMessageStopAsync(Stop.anotherError, result.ResponseType.ToString());
@@ -328,7 +357,8 @@ namespace Insta.Working
                         break;
                     case Stop.limit:
                         await Tgbot.SendTextMessageAsync(Owner.Id,
-                            $"🏁 Отработка завершена с ошибкой. Аккаунт {Instagram.Username}. Хештег #{Hashtag}. Вы достигли ограничения.{result}.\nПерезаход в аккаунт завершит все запущенные на нем отработки.", replyMarkup:Keyboards.Exit(Instagram.Id,false));
+                            $"🏁 Отработка завершена с ошибкой. Аккаунт {Instagram.Username}. Хештег #{Hashtag}. Вы достигли ограничения.{result}.\nПерезаход в аккаунт завершит все запущенные на нем отработки.",
+                            replyMarkup: Keyboards.Exit(Instagram.Id, false));
                         break;
                     case Stop.logOut:
                         await Tgbot.SendTextMessageAsync(Owner.Id,
