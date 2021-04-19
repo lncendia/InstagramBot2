@@ -15,8 +15,7 @@ namespace Insta.Bot
         public static TelegramBotClient Get()
         {
             if (_client != null) return _client;
-            _client = new TelegramBotClient(
-                "1682222171:AAGw4CBCJ875NRn1rFnh0sBncYkev5KIa4o");
+            _client = new TelegramBotClient("1682222171:AAGw4CBCJ875NRn1rFnh0sBncYkev5KIa4o");
             Commands = InitialiseCommands();
             CallbackQueryCommands = InitialiseCallbackQueryCommands();
             using Db db = new Db();

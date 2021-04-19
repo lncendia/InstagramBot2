@@ -143,6 +143,7 @@ namespace Insta.Working
                 }
 
                 await SendMessageStartAsync();
+                
                 var posts = await Instagram.Api.HashtagProcessor.GetRecentHashtagMediaListAsync(Hashtag,
                     PaginationParameters.MaxPagesToLoad(34));
                 if (CancelTokenSource.IsCancellationRequested)
@@ -150,7 +151,7 @@ namespace Insta.Working
                     await SendMessageStopAsync(Stop.ok);
                 }
                 else if (posts.Succeeded) return posts;
-                else if (posts.Info.Exception is HttpRequestException || posts.Info.Exception is NullReferenceException)
+                else if (posts.Info.Exception is HttpRequestException or NullReferenceException)
                 {
                     if (Operation.CheckProxy(Instagram.Proxy))
                     {
@@ -158,7 +159,12 @@ namespace Insta.Working
                         return null;
                     }
 
+                    await Task.Delay(new TimeSpan(0, 2, 0));
+                    posts = await Instagram.Api.HashtagProcessor.GetRecentHashtagMediaListAsync(Hashtag,
+                        PaginationParameters.MaxPagesToLoad(34));
+                    if (posts.Succeeded) return posts;
                     await SendMessageStopAsync(Stop.proxyError, "Ошибка прокси");
+                    return null;
                 }
                 else if (posts.Info.ResponseType == ResponseType.LoginRequired)
                 {
@@ -179,7 +185,8 @@ namespace Insta.Working
         }
 
         private int _countNetworkProblems;
-        private bool _pause;
+        private int _timeOuts;
+        private int _proxyErrors;
 
         public async Task StartAsync()
         {
@@ -255,21 +262,25 @@ namespace Insta.Working
                 switch (result.ResponseType)
                 {
                     case ResponseType.Spam:
-                        if (!_pause)
+                        if (_timeOuts < 3)
                         {
-                            _pause = true;
+                            _iterator--;
+                            _timeOuts++;
                             await Task.Delay(new TimeSpan(0, 5, 0));
                             return true;
                         }
+
                         await SendMessageStopAsync(Stop.limit, "limit");
                         return false;
                     case ResponseType.RequestsLimit:
-                        if (!_pause)
+                        if (_timeOuts < 3)
                         {
-                            _pause = true;
+                            _iterator--;
+                            _timeOuts++;
                             await Task.Delay(new TimeSpan(0, 5, 0));
                             return true;
                         }
+
                         await SendMessageStopAsync(Stop.limit, "limit");
                         return false;
                     case ResponseType.OK:
@@ -282,14 +293,29 @@ namespace Insta.Working
                             return true;
                         else
                         {
+                            if (_proxyErrors < 1)
+                            {
+                                _iterator--;
+                                _proxyErrors++;
+                                await Task.Delay(new TimeSpan(0, 2, 0));
+                                return true;
+                            }
+
                             await SendMessageStopAsync(Stop.proxyError, "Ошибка прокси");
                             return false;
                         }
                     case ResponseType.NetworkProblem:
+                        _iterator--;
                         _countNetworkProblems++;
                         if (_countNetworkProblems < 10) return true;
                         if (result.Exception is HttpRequestException)
                         {
+                            if (_proxyErrors < 1)
+                            {
+                                _proxyErrors++;
+                                await Task.Delay(new TimeSpan(0, 2, 0));
+                                return true;
+                            }
                             Operation.CheckProxy(Instagram.Proxy);
                             await SendMessageStopAsync(Stop.proxyError, "Ошибка прокси");
                         }

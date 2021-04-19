@@ -141,6 +141,7 @@ namespace Insta.Working
                     };
                 }
                 else proxy = GetProxy(instagram);
+                
                 var instaApi = InstaApiBuilder.CreateBuilder()
                     .UseHttpClientHandler(new HttpClientHandler {Proxy = proxy})
                     .SetUser(userSession)
