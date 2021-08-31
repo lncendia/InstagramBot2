@@ -22,17 +22,18 @@ namespace Insta.Bot.CallbackQueryCommands
                 await client.AnswerCallbackQueryAsync(query.Id, "Успешно оплачено.");
                 if (user.Referal == null) return;
                 await using Db db = new Db();
-                db.UpdateRange(user,user.Referal);
-                user.Referal.Bonus += 60;
+                db.UpdateRange(user, user.Referal);
+                user.Referal.Bonus += BotSettings.Cfg.Bonus;
                 try
                 {
                     await client.SendTextMessageAsync(user.Referal.Id,
-                        "По вашей реферальной ссылке перешел пользователь. Вам зачисленно 60 бонусных рублей.");
+                        $"По вашей реферальной ссылке перешел пользователь. Вам зачисленно {BotSettings.Cfg.Bonus} бонусных рублей.");
                 }
                 catch
                 {
                     //ignored
                 }
+
                 user.Referal = null;
                 await db.SaveChangesAsync();
                 return;

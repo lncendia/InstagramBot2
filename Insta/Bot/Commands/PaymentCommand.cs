@@ -13,7 +13,7 @@ namespace Insta.Bot.Commands
         public async Task Execute(TelegramBotClient client, User user, Message message)
         {
             await client.SendTextMessageAsync(message.Chat.Id,
-                "Введите количество аккаунтов, которые хотите добавить. Цена одного аккаунта - 120 рублей/30 дней.",
+                $"Введите количество аккаунтов, которые хотите добавить. Цена одного аккаунта - {BotSettings.Cfg.Cost} рублей/30 дней.",
                 replyMarkup: Keyboards.Main);
             user.State = State.enterCountToBuy;
         }

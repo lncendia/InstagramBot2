@@ -15,7 +15,8 @@ namespace Insta.Bot
         public static TelegramBotClient Get()
         {
             if (_client != null) return _client;
-            _client = new TelegramBotClient("1682222171:AAGw4CBCJ875NRn1rFnh0sBncYkev5KIa4o");
+            Cfg = Configuration.Configuration.Initialise("appsettings.json");
+            _client = new TelegramBotClient(Cfg.TelegramToken);
             Commands = InitialiseCommands();
             CallbackQueryCommands = InitialiseCallbackQueryCommands();
             using Db db = new Db();
@@ -90,6 +91,7 @@ namespace Insta.Bot
         }
 
         public static List<User> Users;
+        public static Configuration.Configuration Cfg;
         private static TelegramBotClient _client;
         public static List<ITextCommand> Commands;
         public static List<ICallbackQueryCommand> CallbackQueryCommands;

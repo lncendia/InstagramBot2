@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using Insta.Bot;
 using Insta.Model;
 using Newtonsoft.Json.Linq;
 using Qiwi.BillPayments.Client;
@@ -11,10 +12,7 @@ namespace Insta.Payments
 {
     internal class Payment
     {
-        private const string SecretKey =
-            "eyJ2ZXJzaW9uIjoiUDJQIiwiZGF0YSI6eyJwYXlpbl9tZXJjaGFudF9zaXRlX3VpZCI6Imk0ZmVmNS0wMCIsInVzZXJfaWQiOiI3OTI2NjY2Mzk0MSIsInNlY3JldCI6ImUzZjI1YWNjZDJhZTA5YzJjZjNlMDUwMGI1YjM4NDdmMTljZjA4YjU4MjNjYmQ3M2IyY2Q2Mzk4ODE4NGE1YTcifX0=";
-
-        private readonly BillPaymentsClient _client = BillPaymentsClientFactory.Create(SecretKey);
+        private readonly BillPaymentsClient _client = BillPaymentsClientFactory.Create(BotSettings.Cfg.QiwiToken);
 
         public string AddTransaction(int sum, User user, int countSubscribes, ref string billId)
         {
@@ -54,7 +52,7 @@ namespace Insta.Payments
                 _httpClient.BaseUrl = new Uri($"https://api.qiwi.com/partner/bill/v1/bills/{billId}");
                 var request = new RestRequest(Method.GET);
                 request.AddHeader("Accept", "application/json");
-                request.AddHeader("Authorization", $"Bearer {SecretKey}");
+                request.AddHeader("Authorization", $"Bearer {BotSettings.Cfg.QiwiToken}");
                 IRestResponse response = _httpClient.Execute(request);
                 dynamic jObject = JObject.Parse(response.Content);
                 if (jObject.status.value != "PAID") return false;
@@ -73,6 +71,7 @@ namespace Insta.Payments
                     if (inst == null) continue;
                     inst.IsDeactivated = false;
                 }
+
                 db.SaveChanges();
                 return true;
             }

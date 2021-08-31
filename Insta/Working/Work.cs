@@ -1,14 +1,17 @@
 ﻿using System;
+using System.Net;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Timers;
+using HtmlAgilityPack;
 using Insta.Bot;
 using Insta.Enums;
 using Insta.Model;
 using InstagramApiSharp;
 using InstagramApiSharp.Classes;
 using InstagramApiSharp.Classes.Models;
+using RestSharp;
 using Telegram.Bot;
 using Timer = System.Timers.Timer;
 
@@ -143,7 +146,7 @@ namespace Insta.Working
                 }
 
                 await SendMessageStartAsync();
-                
+
                 var posts = await Instagram.Api.HashtagProcessor.GetRecentHashtagMediaListAsync(Hashtag,
                     PaginationParameters.MaxPagesToLoad(34));
                 if (CancelTokenSource.IsCancellationRequested)
@@ -252,88 +255,81 @@ namespace Insta.Working
 
         private async Task<bool> CheckResultAsync(ResultInfo result)
         {
-            try
+            if (result == null)
             {
-                if (result == null)
-                {
-                    return false;
-                }
-
-                switch (result.ResponseType)
-                {
-                    case ResponseType.Spam:
-                        if (_timeOuts < 3)
-                        {
-                            _iterator--;
-                            _timeOuts++;
-                            await Task.Delay(new TimeSpan(0, 5, 0));
-                            return true;
-                        }
-
-                        await SendMessageStopAsync(Stop.limit, "limit");
-                        return false;
-                    case ResponseType.RequestsLimit:
-                        if (_timeOuts < 3)
-                        {
-                            _iterator--;
-                            _timeOuts++;
-                            await Task.Delay(new TimeSpan(0, 5, 0));
-                            return true;
-                        }
-
-                        await SendMessageStopAsync(Stop.limit, "limit");
-                        return false;
-                    case ResponseType.OK:
-                        return true;
-                    case ResponseType.LoginRequired:
-                        await SendMessageStopAsync(Stop.logOut, "logOut");
-                        return false;
-                    case ResponseType.UnExpectedResponse:
-                        if (Operation.CheckProxy(Instagram.Proxy))
-                            return true;
-                        else
-                        {
-                            if (_proxyErrors < 1)
-                            {
-                                _iterator--;
-                                _proxyErrors++;
-                                await Task.Delay(new TimeSpan(0, 2, 0));
-                                return true;
-                            }
-
-                            await SendMessageStopAsync(Stop.proxyError, "Ошибка прокси");
-                            return false;
-                        }
-                    case ResponseType.NetworkProblem:
-                        _iterator--;
-                        _countNetworkProblems++;
-                        if (_countNetworkProblems < 10) return true;
-                        if (result.Exception is HttpRequestException)
-                        {
-                            if (_proxyErrors < 1)
-                            {
-                                _proxyErrors++;
-                                await Task.Delay(new TimeSpan(0, 2, 0));
-                                return true;
-                            }
-                            Operation.CheckProxy(Instagram.Proxy);
-                            await SendMessageStopAsync(Stop.proxyError, "Ошибка прокси");
-                        }
-                        else
-                        {
-                            await SendMessageStopAsync(Stop.anotherError, result.ResponseType.ToString());
-                        }
-
-                        return false;
-                    default:
-                        await SendMessageStopAsync(Stop.anotherError, result.ResponseType.ToString());
-                        return false;
-                }
-            }
-            catch (Exception ex)
-            {
-                await SendMessageStopAsync(Stop.anotherError, message: ex.Message);
                 return false;
+            }
+
+            switch (result.ResponseType)
+            {
+                case ResponseType.Spam:
+                    if (_timeOuts < 3)
+                    {
+                        _iterator--;
+                        _timeOuts++;
+                        await Task.Delay(new TimeSpan(0, 5, 0));
+                        return true;
+                    }
+
+                    await SendMessageStopAsync(Stop.limit, "limit");
+                    return false;
+                case ResponseType.RequestsLimit:
+                    if (_timeOuts < 3)
+                    {
+                        _iterator--;
+                        _timeOuts++;
+                        await Task.Delay(new TimeSpan(0, 5, 0));
+                        return true;
+                    }
+
+                    await SendMessageStopAsync(Stop.limit, "limit");
+                    return false;
+                case ResponseType.OK:
+                    return true;
+                case ResponseType.LoginRequired:
+                    await SendMessageStopAsync(Stop.logOut, "logOut");
+                    return false;
+                case ResponseType.UnExpectedResponse:
+                    if (Operation.CheckProxy(Instagram.Proxy))
+                        return true;
+                    else
+                    {
+                        if (_proxyErrors < 1)
+                        {
+                            _iterator--;
+                            _proxyErrors++;
+                            await Task.Delay(new TimeSpan(0, 2, 0));
+                            return true;
+                        }
+
+                        await SendMessageStopAsync(Stop.proxyError, "Ошибка прокси");
+                        return false;
+                    }
+                case ResponseType.NetworkProblem:
+                    _iterator--;
+                    _countNetworkProblems++;
+                    if (_countNetworkProblems < 10) return true;
+                    if (result.Exception is HttpRequestException)
+                    {
+                        if (_proxyErrors < 1)
+                        {
+                            _proxyErrors++;
+                            await Task.Delay(new TimeSpan(0, 2, 0));
+                            return true;
+                        }
+
+                        Operation.CheckProxy(Instagram.Proxy);
+                        await SendMessageStopAsync(Stop.proxyError, "Ошибка прокси");
+                    }
+                    else
+                    {
+                        await SendMessageStopAsync(Stop.anotherError, result.ResponseType.ToString());
+                    }
+
+                    return false;
+                default:
+                    await SendMessageStopAsync(Stop.anotherError, result.ResponseType.ToString());
+                    return false;
             }
         }
 
@@ -372,7 +368,7 @@ namespace Insta.Working
                 }
 
                 var log = stop == Stop.ok
-                    ? $"[{DateTime.Now:HH:mm:ss}] Отработка завершена у {Owner.Id} ({LowerDelay}-{UpperDelay}).\nИнстаграм: {Instagram.Username}\nХештег: #{Hashtag}{result}\n"
+                    ? $"[{DateTime.Now:HH:mm:ss}] Отработка завершена у {Owner.Id} ({LowerDelay}-{UpperDelay}).\n[{Instagram.Proxy.Id}] {Instagram.Proxy.Host}:{Instagram.Proxy.Port}.\nИнстаграм: {Instagram.Username}\nХештег: #{Hashtag}{result}\n"
                     : $"[{DateTime.Now:HH:mm:ss}] Отработка завершена у {Owner.Id} ({LowerDelay}-{UpperDelay}) c ошибкой: {message}\n[{Instagram.Proxy.Id}] {Instagram.Proxy.Host}:{Instagram.Proxy.Port}.\nИнстаграм: {Instagram.Username}\nХештег: #{Hashtag}{result}\n";
                 Console.WriteLine(log);
                 switch (stop)
@@ -382,6 +378,26 @@ namespace Insta.Working
                             $"🏁 Отработка завершена успешно. Аккаунт {Instagram.Username}. Хештег #{Hashtag}.{result}");
                         break;
                     case Stop.limit:
+                        try
+                        {
+                            using var httpclient = new HttpClient(Instagram.Api.HttpRequestProcessor.HttpHandler);
+                            var response = await httpclient.GetAsync("https://yandex.ru/internet");
+                            if (response.StatusCode == HttpStatusCode.OK)
+                            {
+                                HtmlDocument html = new HtmlDocument();
+                                html.LoadHtml(await response.Content.ReadAsStringAsync());
+                                var table = html.DocumentNode.SelectSingleNode(
+                                    "//ul[contains(@class, 'general-info layout__general-info')]");
+                                var ipv4 = table.ChildNodes[0].LastChild.InnerText;
+                                var ipv6 = table.ChildNodes[1].LastChild.InnerText;
+                                Console.WriteLine($"IPv4: {ipv4}\nIPv6: {ipv6}");
+                            }
+                        }
+                        catch
+                        {
+                            //ignored
+                        }
+
                         await Tgbot.SendTextMessageAsync(Owner.Id,
                             $"🏁 Отработка завершена с ошибкой. Аккаунт {Instagram.Username}. Хештег #{Hashtag}. Вы достигли ограничения.{result}.\nПерезаход в аккаунт завершит все запущенные на нем отработки.",
                             replyMarkup: Keyboards.Exit(Instagram.Id, false));

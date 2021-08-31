@@ -29,8 +29,8 @@ namespace Insta.Bot.Commands
             }
 
             string billId = "";
-            int bonus = count * 60 >= user.Bonus ? user.Bonus : count * 60;
-            var payUrl = new Payment().AddTransaction(count * 120 - bonus, user, count, ref billId);
+            int bonus = count * BotSettings.Cfg.Bonus >= user.Bonus ? user.Bonus : count * BotSettings.Cfg.Bonus;
+            var payUrl = new Payment().AddTransaction(count * BotSettings.Cfg.Cost - bonus, user, count, ref billId);
             if (payUrl == null)
             {
                 await client.SendTextMessageAsync(message.From.Id,
@@ -45,7 +45,7 @@ namespace Insta.Bot.Commands
             user.State = State.main;
 
             await client.SendTextMessageAsync(message.From.Id,
-                $"💸 Оплата подписки на сумму {count * 120}₽ из которых {bonus}₽ списанно с бонусного счета.\n📆 Дата: {DateTime.Now:dd.MMM.yyyy}\n❌ Статус: Не оплачено.\n\n💳 Оплатите счет по ссылке.\n{payUrl}",
+                $"💸 Оплата подписки на сумму {count * BotSettings.Cfg.Cost}₽ из которых {bonus}₽ списанно с бонусного счета.\n📆 Дата: {DateTime.Now:dd.MMM.yyyy}\n❌ Статус: Не оплачено.\n\n💳 Оплатите счет по ссылке.\n{payUrl}",
                 replyMarkup: Keyboards.CheckBill(billId));
         }
 
