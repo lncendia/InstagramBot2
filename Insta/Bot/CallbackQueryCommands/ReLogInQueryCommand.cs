@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using System.Threading.Tasks;
 using Insta.Enums;
 using Insta.Interfaces;
@@ -36,13 +37,20 @@ namespace Insta.Bot.CallbackQueryCommands
                 await client.AnswerCallbackQueryAsync(query.Id, "Инстаграм деактивирован.");
                 return;
             }
+            if (inst.Block > DateTime.Now)
+            {
+                await client.AnswerCallbackQueryAsync(query.Id,
+                    $"Вы сможете перезайти в этот аккаунт через {(inst.Block - DateTime.Now):g}.", true);
+                await client.DeleteMessageAsync(query.From.Id, query.Message.MessageId);
+                return;
+            }
 
             if (!await Operation.LogOutAsync(user, inst))
             {
                 {
                     user.State = State.main;
                     await client.AnswerCallbackQueryAsync(query.Id,
-                        "Ошибка. Возможно на аккаунте запущены отложенные отработки.", showAlert: true);
+                        "Ошибка. Возможно на аккаунте запущены отложенные отработки.", true);
                     return;
                 }
             }

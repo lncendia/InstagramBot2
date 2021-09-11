@@ -21,8 +21,10 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Remove="users.sqlite" />
     <None Update="appsettings.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="users.sqlite">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>

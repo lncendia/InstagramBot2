@@ -59,7 +59,7 @@ namespace Insta.Bot
 
         private static List<ICallbackQueryCommand> InitialiseCallbackQueryCommands()
         {
-            return new()
+            return new List<ICallbackQueryCommand>
             {
                 new BillQueryCommand(),
                 new ExitQueryCommand(),

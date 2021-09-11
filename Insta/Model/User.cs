@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Insta.Enums;
@@ -13,7 +14,7 @@ namespace Insta.Model
 
         public int Bonus { get; set; }
         public User Referal { get; set; }
-
+        public int CountLogOut { get; set; }
         public List<Instagram> Instagrams { get; set; } = new();
         public List<Subscribe> Subscribes { get; set; } = new();
         [NotMapped] public List<Work> Works { get; } = new();

@@ -15,11 +15,6 @@ namespace Insta
         public DbSet<WorkTask> Works { get; set; }
         public DbSet<Proxy> Proxies { get; set; }
 
-        public Db()
-        {
-            Database.EnsureCreated();
-        }
-
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
             optionsBuilder.UseSqlite("Filename=users.sqlite");

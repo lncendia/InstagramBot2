@@ -228,6 +228,7 @@ namespace Insta.Working
                 db.RemoveRange(works);
                 user.Instagrams.Remove(inst);
                 db.Remove(inst);
+                user.CountLogOut++;
                 await db.SaveChangesAsync();
                 if (inst.Api != null) await inst.Api.LogoutAsync();
                 return true;

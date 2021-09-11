@@ -13,6 +13,7 @@ using InstagramApiSharp.Classes;
 using InstagramApiSharp.Classes.Models;
 using RestSharp;
 using Telegram.Bot;
+using Result = Insta.Enums.Result;
 using Timer = System.Timers.Timer;
 
 namespace Insta.Working
@@ -148,7 +149,7 @@ namespace Insta.Working
                 await SendMessageStartAsync();
 
                 var posts = await Instagram.Api.HashtagProcessor.GetRecentHashtagMediaListAsync(Hashtag,
-                    PaginationParameters.MaxPagesToLoad(34));
+                    PaginationParameters.MaxPagesToLoad(1));
                 if (CancelTokenSource.IsCancellationRequested)
                 {
                     await SendMessageStopAsync(Stop.ok);
@@ -217,35 +218,86 @@ namespace Insta.Working
                     switch (_mode)
                     {
                         case Mode.like:
-                            if (post.HasLiked) continue;
-                            var like = await Instagram.Api.MediaProcessor.LikeMediaAsync(post.InstaIdentifier);
-                            if (!await CheckResultAsync(like.Info)) return;
-                            _countLike++;
+                            if (!post.HasLiked)
+                            {
+                                switch (await CheckResultAsync(
+                                    (await Instagram.Api.MediaProcessor.LikeMediaAsync(post.InstaIdentifier)).Info))
+                                {
+                                    case Result.ok:
+                                        ++_countLike;
+                                        break;
+                                    case Result.timeOut:
+                                        continue;
+                                    case Result.stop:
+                                        return;
+                                }
+                            }
+
                             break;
                         case Mode.save:
-                            var save = await Instagram.Api.MediaProcessor.SaveMediaAsync(post.InstaIdentifier);
-                            if (!await CheckResultAsync(save.Info)) return;
-                            _countSave++;
+                            switch (await CheckResultAsync(
+                                (await Instagram.Api.MediaProcessor.SaveMediaAsync(post.InstaIdentifier)).Info))
+                            {
+                                case Result.ok:
+                                    ++_countSave;
+                                    break;
+                                case Result.timeOut:
+                                    continue;
+                                case Result.stop:
+                                    return;
+                            }
+
                             break;
                         case Mode.follow:
-                            var follow = await Instagram.Api.UserProcessor.FollowUserAsync(post.User.Pk);
-                            if (!await CheckResultAsync(follow.Info)) return;
-                            _countFollow++;
+                            switch (await CheckResultAsync(
+                                (await Instagram.Api.UserProcessor.FollowUserAsync(post.User.Pk)).Info))
+                            {
+                                case Result.ok:
+                                    ++_countFollow;
+                                    break;
+                                case Result.timeOut:
+                                    continue;
+                                case Result.stop:
+                                    return;
+                            }
+
                             break;
                         case Mode.likeAndSave:
-                            like = await Instagram.Api.MediaProcessor.LikeMediaAsync(post.InstaIdentifier);
-                            save = await Instagram.Api.MediaProcessor.SaveMediaAsync(post.InstaIdentifier);
-                            if (!await CheckResultAsync(like.Info)) return;
-                            if (!await CheckResultAsync(save.Info)) return;
-                            _countSave++;
-                            _countLike++;
+                            if (!post.HasLiked)
+                            {
+                                switch (await CheckResultAsync(
+                                    (await Instagram.Api.MediaProcessor.LikeMediaAsync(post.InstaIdentifier)).Info))
+                                {
+                                    case Result.ok:
+                                        ++_countLike;
+                                        post.HasLiked = true;
+                                        break;
+                                    case Result.timeOut:
+                                        continue;
+                                    case Result.stop:
+                                        return;
+                                }
+                            }
+
+                            switch (await CheckResultAsync(
+                                (await Instagram.Api.MediaProcessor.SaveMediaAsync(post.InstaIdentifier)).Info))
+                            {
+                                case Result.ok:
+                                    ++_countSave;
+                                    break;
+                                case Result.timeOut:
+                                    continue;
+                                case Result.stop:
+                                    return;
+                            }
+
                             break;
                     }
 
                     await Task.Delay(Rnd.Next(LowerDelay, UpperDelay) * 1000);
                 }
 
-                await SendMessageStopAsync(Stop.ok);
+                await SendMessageStopAsync(Stop.ok, needBlock: true);
             }
             catch (Exception ex)
             {
@@ -253,83 +305,78 @@ namespace Insta.Working
             }
         }
 
-        private async Task<bool> CheckResultAsync(ResultInfo result)
+        private async Task<Result> CheckResultAsync(ResultInfo result)
         {
-            if (result == null)
             {
-                return false;
-            }
+                if (result == null)
+                    return Result.stop;
+                switch (result.ResponseType)
+                {
+                    case ResponseType.LoginRequired:
+                        await SendMessageStopAsync(Stop.logOut, "logOut");
+                        return Result.stop;
+                    case ResponseType.RequestsLimit:
+                        if (_timeOuts < 3)
+                        {
+                            --_iterator;
+                            ++_timeOuts;
+                            await Task.Delay(new TimeSpan(0, 5, 0));
+                            return Result.timeOut;
+                        }
 
-            switch (result.ResponseType)
-            {
-                case ResponseType.Spam:
-                    if (_timeOuts < 3)
-                    {
-                        _iterator--;
-                        _timeOuts++;
-                        await Task.Delay(new TimeSpan(0, 5, 0));
-                        return true;
-                    }
-
-                    await SendMessageStopAsync(Stop.limit, "limit");
-                    return false;
-                case ResponseType.RequestsLimit:
-                    if (_timeOuts < 3)
-                    {
-                        _iterator--;
-                        _timeOuts++;
-                        await Task.Delay(new TimeSpan(0, 5, 0));
-                        return true;
-                    }
-
-                    await SendMessageStopAsync(Stop.limit, "limit");
-                    return false;
-                case ResponseType.OK:
-                    return true;
-                case ResponseType.LoginRequired:
-                    await SendMessageStopAsync(Stop.logOut, "logOut");
-                    return false;
-                case ResponseType.UnExpectedResponse:
-                    if (Operation.CheckProxy(Instagram.Proxy))
-                        return true;
-                    else
-                    {
+                        await SendMessageStopAsync(Stop.limit, "limit");
+                        return Result.stop;
+                    case ResponseType.OK:
+                        return Result.ok;
+                    case ResponseType.UnExpectedResponse:
+                        if (Operation.CheckProxy(Instagram.Proxy))
+                            return Result.timeOut;
                         if (_proxyErrors < 1)
                         {
-                            _iterator--;
-                            _proxyErrors++;
+                            --_iterator;
+                            ++_proxyErrors;
                             await Task.Delay(new TimeSpan(0, 2, 0));
-                            return true;
+                            return Result.timeOut;
                         }
 
                         await SendMessageStopAsync(Stop.proxyError, "Ошибка прокси");
-                        return false;
-                    }
-                case ResponseType.NetworkProblem:
-                    _iterator--;
-                    _countNetworkProblems++;
-                    if (_countNetworkProblems < 10) return true;
-                    if (result.Exception is HttpRequestException)
-                    {
-                        if (_proxyErrors < 1)
+                        return Result.stop;
+                    case ResponseType.Spam:
+                        if (_timeOuts < 3)
                         {
-                            _proxyErrors++;
-                            await Task.Delay(new TimeSpan(0, 2, 0));
-                            return true;
+                            --_iterator;
+                            ++_timeOuts;
+                            await Task.Delay(new TimeSpan(0, 5, 0));
+                            return Result.timeOut;
                         }
 
-                        Operation.CheckProxy(Instagram.Proxy);
-                        await SendMessageStopAsync(Stop.proxyError, "Ошибка прокси");
-                    }
-                    else
-                    {
+                        await SendMessageStopAsync(Stop.limit, "limit");
+                        return Result.stop;
+                    case ResponseType.NetworkProblem:
+                        --_iterator;
+                        ++_countNetworkProblems;
+                        if (_countNetworkProblems < 10)
+                            return Result.timeOut;
+                        if (result.Exception is HttpRequestException)
+                        {
+                            if (_proxyErrors < 1)
+                            {
+                                ++_proxyErrors;
+                                await Task.Delay(new TimeSpan(0, 2, 0));
+                                return Result.timeOut;
+                            }
+
+                            Operation.CheckProxy(Instagram.Proxy);
+                            await SendMessageStopAsync(Stop.proxyError, "Ошибка прокси");
+                        }
+                        else
+                            await SendMessageStopAsync(Stop.anotherError, result.ResponseType.ToString());
+
+                        return Result.stop;
+                    default:
                         await SendMessageStopAsync(Stop.anotherError, result.ResponseType.ToString());
-                    }
-
-                    return false;
-                default:
-                    await SendMessageStopAsync(Stop.anotherError, result.ResponseType.ToString());
-                    return false;
+                        return Result.stop;
+                }
             }
         }
 
@@ -349,11 +396,13 @@ namespace Insta.Working
             }
         }
 
-        private async Task SendMessageStopAsync(Stop stop, string message = "")
+        private async Task SendMessageStopAsync(Stop stop, string message = "", bool needBlock = false)
         {
             try
             {
                 Owner.Works.Remove(this);
+                if (needBlock) Instagram.Block = DateTime.Now.AddHours(2);
+                if (stop != Stop.ok) Instagram.Block = DateTime.MinValue;
                 var result = _mode switch
                 {
                     Mode.like => $"\nЛайков поставлено: {_countLike}",
@@ -378,25 +427,25 @@ namespace Insta.Working
                             $"🏁 Отработка завершена успешно. Аккаунт {Instagram.Username}. Хештег #{Hashtag}.{result}");
                         break;
                     case Stop.limit:
-                        try
-                        {
-                            using var httpclient = new HttpClient(Instagram.Api.HttpRequestProcessor.HttpHandler);
-                            var response = await httpclient.GetAsync("https://yandex.ru/internet");
-                            if (response.StatusCode == HttpStatusCode.OK)
-                            {
-                                HtmlDocument html = new HtmlDocument();
-                                html.LoadHtml(await response.Content.ReadAsStringAsync());
-                                var table = html.DocumentNode.SelectSingleNode(
-                                    "//ul[contains(@class, 'general-info layout__general-info')]");
-                                var ipv4 = table.ChildNodes[0].LastChild.InnerText;
-                                var ipv6 = table.ChildNodes[1].LastChild.InnerText;
-                                Console.WriteLine($"IPv4: {ipv4}\nIPv6: {ipv6}");
-                            }
-                        }
-                        catch
-                        {
-                            //ignored
-                        }
+                        // try
+                        // {
+                        //     using var httpclient = new HttpClient(Instagram.Api.HttpRequestProcessor.HttpHandler);
+                        //     var response = await httpclient.GetAsync("https://yandex.ru/internet");
+                        //     if (response.StatusCode == HttpStatusCode.OK)
+                        //     {
+                        //         HtmlDocument html = new HtmlDocument();
+                        //         html.LoadHtml(await response.Content.ReadAsStringAsync());
+                        //         var table = html.DocumentNode.SelectSingleNode(
+                        //             "//ul[contains(@class, 'general-info layout__general-info')]");
+                        //         var ipv4 = table.ChildNodes[0].LastChild.InnerText;
+                        //         var ipv6 = table.ChildNodes[1].LastChild.InnerText;
+                        //         Console.WriteLine($"IPv4: {ipv4}\nIPv6: {ipv6}");
+                        //     }
+                        // }
+                        // catch
+                        // {
+                        //     //ignored
+                        // }
 
                         await Tgbot.SendTextMessageAsync(Owner.Id,
                             $"🏁 Отработка завершена с ошибкой. Аккаунт {Instagram.Username}. Хештег #{Hashtag}. Вы достигли ограничения.{result}.\nПерезаход в аккаунт завершит все запущенные на нем отработки.",
@@ -422,20 +471,15 @@ namespace Insta.Working
                         break;
                 }
 
+                await using Db context = new Db();
+                context.Update(Instagram);
                 if (_works != null)
                 {
-                    try
-                    {
-                        await using Db context = new Db();
-                        context.Update(_works);
-                        context.Remove(_works);
-                        await context.SaveChangesAsync();
-                    }
-                    catch
-                    {
-                        // ignored
-                    }
+                    context.Update(_works);
+                    context.Remove(_works);
                 }
+
+                await context.SaveChangesAsync();
             }
             catch
             {
