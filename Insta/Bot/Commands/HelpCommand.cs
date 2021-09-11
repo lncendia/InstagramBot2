@@ -17,7 +17,7 @@ namespace Insta.Bot.Commands
             user.EnterData = null;
             user.State = State.main;
             await client.SendTextMessageAsync(message.Chat.Id,
-                "За поддержкой вы можете обратиться к @Per4at.");
+                $"За поддержкой вы можете обратиться к {BotSettings.Cfg.NameSupport}.");
         }
 
         public bool Compare(Message message, User user)

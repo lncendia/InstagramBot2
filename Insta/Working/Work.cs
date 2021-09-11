@@ -1,17 +1,14 @@
 ﻿using System;
-using System.Net;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Timers;
-using HtmlAgilityPack;
 using Insta.Bot;
 using Insta.Enums;
 using Insta.Model;
 using InstagramApiSharp;
 using InstagramApiSharp.Classes;
 using InstagramApiSharp.Classes.Models;
-using RestSharp;
 using Telegram.Bot;
 using Result = Insta.Enums.Result;
 using Timer = System.Timers.Timer;
@@ -149,7 +146,7 @@ namespace Insta.Working
                 await SendMessageStartAsync();
 
                 var posts = await Instagram.Api.HashtagProcessor.GetRecentHashtagMediaListAsync(Hashtag,
-                    PaginationParameters.MaxPagesToLoad(1));
+                    PaginationParameters.MaxPagesToLoad(34));
                 if (CancelTokenSource.IsCancellationRequested)
                 {
                     await SendMessageStopAsync(Stop.ok);
@@ -401,8 +398,8 @@ namespace Insta.Working
             try
             {
                 Owner.Works.Remove(this);
-                if (needBlock) Instagram.Block = DateTime.Now.AddHours(2);
-                if (stop != Stop.ok) Instagram.Block = DateTime.MinValue;
+                if (needBlock) Instagram.Block = DateTime.Now.AddHours(BotSettings.Cfg.BlockHours);
+                else if (stop != Stop.ok) Instagram.Block = DateTime.MinValue;
                 var result = _mode switch
                 {
                     Mode.like => $"\nЛайков поставлено: {_countLike}",

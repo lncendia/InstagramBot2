@@ -1,10 +1,4 @@
-﻿// Decompiled with JetBrains decompiler
-// Type: Insta.Configuration.Configuration
-// Assembly: Insta, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
-// MVID: 618A128D-D21F-4C2F-8A52-8FDB43CCAD32
-// Assembly location: C:\Users\egorl\Desktop\LikeBot2\Insta.dll
-
-using Newtonsoft.Json;
+﻿using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -28,6 +22,7 @@ namespace Insta.Configuration
     public int Interval { get; set; }
 
     public string NameSupport { get; set; }
+    public int BlockHours { get; set; }
 
     public List<long> Admins { get; set; }
 
