@@ -21,19 +21,15 @@ namespace Insta.Bot.CallbackQueryCommands
                 return;
             }
 
-            user.State = State.block;
             Instagram inst = user.Instagrams.FirstOrDefault(_ => _.Id == int.Parse(query.Data[8..]));
             if (inst == null)
             {
-                user.State = State.main;
                 await client.AnswerCallbackQueryAsync(query.Id, "Инстаграм не найден.");
-                await client.DeleteMessageAsync(query.From.Id, query.Message.MessageId);
                 return;
             }
 
             if (inst.IsDeactivated)
             {
-                user.State = State.main;
                 await client.AnswerCallbackQueryAsync(query.Id, "Инстаграм деактивирован.");
                 return;
             }
@@ -41,10 +37,10 @@ namespace Insta.Bot.CallbackQueryCommands
             {
                 await client.AnswerCallbackQueryAsync(query.Id,
                     $"Вы сможете перезайти в этот аккаунт через {(inst.Block - DateTime.Now):g}.", true);
-                await client.DeleteMessageAsync(query.From.Id, query.Message.MessageId);
                 return;
             }
 
+            user.State = State.block;
             if (!await Operation.LogOutAsync(user, inst))
             {
                 {
@@ -59,13 +55,13 @@ namespace Insta.Bot.CallbackQueryCommands
             user.EnterData = new Instagram
                 {User = user, Username = currentUser.UserName, Password = currentUser.Password};
             var login = await Operation.CheckLoginAsync(user.EnterData);
+            user.State = State.main;
             if (await MainBot.Login(user, login))
             {
                 await using Db db = new Db();
                 db.Update(user);
                 db.Add(user.EnterData);
                 user.EnterData = null;
-                user.State = State.main;
                 await db.SaveChangesAsync();
             }
         }

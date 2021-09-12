@@ -25,13 +25,11 @@ namespace Insta.Bot.CallbackQueryCommands
                 {
                     await client.AnswerCallbackQueryAsync(query.Id,
                         $"Вы сможете выйти из этого аккаунта через {(instagram.Block - DateTime.Now):g}.", true);
-                    await client.DeleteMessageAsync(query.From.Id, query.Message.MessageId);
                 }
                 else
                 {
                     string message = (await Operation.LogOutAsync(user, instagram)) ? "Успешно." : "Ошибка.";
                     await client.AnswerCallbackQueryAsync(query.Id, message);
-                    await client.DeleteMessageAsync(query.From.Id, query.Message.MessageId);
                 }
             }
         }
