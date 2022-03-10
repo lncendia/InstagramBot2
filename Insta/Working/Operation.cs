@@ -9,7 +9,6 @@ using Insta.Model;
 using InstagramApiSharp.API;
 using InstagramApiSharp.API.Builder;
 using InstagramApiSharp.Classes;
-using InstagramApiSharp.Logger;
 using Microsoft.EntityFrameworkCore;
 using Telegram.Bot;
 
@@ -21,7 +20,7 @@ namespace Insta.Working
         private static int _number;
         private static readonly TelegramBotClient Tgbot = BotSettings.Get();
         private static readonly object Locker = new();
-        
+
 
         private static IWebProxy GetProxy(Instagram instagram)
         {
@@ -46,7 +45,6 @@ namespace Insta.Working
                     return new WebProxy();
                 }
             }
-
         }
 
         public static void LoadProxy(List<Proxy> proxies)
@@ -122,7 +120,8 @@ namespace Insta.Working
             return true;
         }
 
-        public static async Task<IResult<InstaLoginResult>> CheckLoginAsync(Instagram instagram, bool isAccepted = false)
+        public static async Task<IResult<InstaLoginResult>> CheckLoginAsync(Instagram instagram,
+            bool isAccepted = false)
         {
             try
             {
@@ -141,7 +140,7 @@ namespace Insta.Working
                     };
                 }
                 else proxy = GetProxy(instagram);
-                
+
                 var instaApi = InstaApiBuilder.CreateBuilder()
                     .UseHttpClientHandler(new HttpClientHandler {Proxy = proxy})
                     .SetUser(userSession)
@@ -150,13 +149,11 @@ namespace Insta.Working
                 if (logInResult.Value == InstaLoginResult.Success && !logInResult.Succeeded) return null;
                 instagram.Api = instaApi;
                 return logInResult;
-
             }
             catch
             {
                 return null;
             }
-
         }
 
         private static async Task LoadFromStateDataAsync(Instagram instagram)
@@ -185,7 +182,7 @@ namespace Insta.Working
 
         public static async Task<IResult<InstaLoginTwoFactorResult>> SendCodeTwoFactorAsync(IInstaApi api, string code)
         {
-            var response = await api.TwoFactorLoginAsync(code);
+            var response = await api.TwoFactorLoginAsync(code, 0);
             return response.Succeeded ? response : null;
         }
 
@@ -290,7 +287,8 @@ namespace Insta.Working
                     }
 
                     await db.SaveChangesAsync();
-                    Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] Произведена проверка подписок. Подписок удалено: {count}.\n");
+                    Console.WriteLine(
+                        $"[{DateTime.Now:HH:mm:ss}] Произведена проверка подписок. Подписок удалено: {count}.\n");
                     await Task.Delay(new TimeSpan(1, 0, 0, 0));
                 }
                 catch (Exception ex)
@@ -322,6 +320,7 @@ namespace Insta.Working
                         workUser.SetHashtag(work.Hashtag);
                         workUser.SetDuration(work.LowerDelay, work.UpperDelay);
                         workUser.SetMode(work.Mode);
+                        workUser.SetHashtagType(work.HashtagType);
                         workUser.SetOffset(work.Offset);
                         await workUser.StartAtTimeAsync(work.StartTime, work);
                     }

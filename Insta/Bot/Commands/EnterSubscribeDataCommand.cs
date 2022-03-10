@@ -54,7 +54,7 @@ namespace Insta.Bot.Commands
                 }
 
                 db.Update(user2);
-                db.Add(new Subscribe() {User = user2, EndSubscribe = date});
+                db.Add(new Subscribe {User = user2, EndSubscribe = date});
                 var inst = user2.Instagrams.ToList().FirstOrDefault(_ => _.IsDeactivated);
                 if (inst != null)
                     inst.IsDeactivated = false;

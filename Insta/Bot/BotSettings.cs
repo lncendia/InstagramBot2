@@ -80,11 +80,9 @@ namespace Insta.Bot
                 new ReLogInQueryCommand(),
                 new SelectAccountsListQueryCommand(),
                 new SelectAllAccountsQueryCommand(),
-                new SelectAllAccountsQueryCommand(),
-                new SelectFollowModeQueryCommand(),
-                new SelectSaveModeQueryCommand(),
-                new SelectLikeModeQueryCommand(),
-                new SelectLikeAndSaveModeQueryCommand(),
+                new SelectHashtagTypeQueryCommand(),
+                new HashtagTypeQueryCommand(),
+                new ModeQueryCommand(),
                 new StartEnterAccountDataQueryCommand(),
                 new MySubscribesQueryCommand()
             };

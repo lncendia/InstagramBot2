@@ -8,6 +8,7 @@ using Insta.Model;
 using Insta.Working;
 using InstagramApiSharp.Classes;
 using Telegram.Bot;
+using Telegram.Bot.Args;
 using Telegram.Bot.Types.ReplyMarkups;
 
 namespace Insta.Bot
@@ -24,7 +25,7 @@ namespace Insta.Bot
             Tgbot.StartReceiving();
         }
 
-        private static async void Tgbot_OnCallbackQuery(object sender, Telegram.Bot.Args.CallbackQueryEventArgs e)
+        private static async void Tgbot_OnCallbackQuery(object sender, CallbackQueryEventArgs e)
         {
             try
             {
@@ -40,7 +41,7 @@ namespace Insta.Bot
             }
         }
 
-        private static async void Tgbot_OnMessage(object sender, Telegram.Bot.Args.MessageEventArgs e)
+        private static async void Tgbot_OnMessage(object sender, MessageEventArgs e)
         {
             try
             {
@@ -154,8 +155,7 @@ namespace Insta.Bot
                     }
                         break;
                     case InstaLoginResult.Exception:
-                        if (login.Info.Exception is HttpRequestException ||
-                            login.Info.Exception is NullReferenceException)
+                        if (login.Info.Exception is HttpRequestException or NullReferenceException)
                         {
                             Operation.CheckProxy(user.EnterData.Proxy);
                         }

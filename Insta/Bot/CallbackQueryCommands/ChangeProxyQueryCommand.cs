@@ -26,8 +26,6 @@ namespace Insta.Bot.CallbackQueryCommands
                     await client.AnswerCallbackQueryAsync(query.Id, message);
                     await client.DeleteMessageAsync(query.From.Id, query.Message.MessageId);
                 }
-
-                return;
             }
         }
 

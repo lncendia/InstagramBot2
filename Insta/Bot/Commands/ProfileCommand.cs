@@ -14,7 +14,7 @@ namespace Insta.Bot.Commands
         {
             await client.SendTextMessageAsync(message.Chat.Id,
                 $"<b>Ваш Id:</b> {user.Id}\n<b>Бонусный счет:</b> {user.Bonus}₽\n<b>Реферальная ссылка:</b> https://telegram.me/LikeChatVip_bot?start={user.Id}",
-                ParseMode.Html, true, replyMarkup: Keyboards.Subscribes);
+                ParseMode.Html, disableWebPagePreview:true, replyMarkup: Keyboards.Subscribes);
         }
 
         public bool Compare(Message message, User user)

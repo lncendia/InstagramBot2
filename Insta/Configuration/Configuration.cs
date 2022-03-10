@@ -1,7 +1,7 @@
-﻿using Newtonsoft.Json;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using Newtonsoft.Json;
 
 namespace Insta.Configuration
 {
@@ -29,7 +29,7 @@ namespace Insta.Configuration
     public static Configuration Initialise(string path)
     {
       using (StreamReader streamReader = new StreamReader(path))
-        return (Configuration) new JsonSerializer().Deserialize((TextReader) streamReader, typeof (Configuration)) ?? throw new NullReferenceException("Файл конфигурации не найден.");
+        return (Configuration) new JsonSerializer().Deserialize(streamReader, typeof (Configuration)) ?? throw new NullReferenceException("Файл конфигурации не найден.");
     }
   }
 }

@@ -11,6 +11,7 @@
         challengeRequiredPhoneCall,
         selectAccounts,
         setMode,
+        setHashtagType,
         setHashtag,
         setDuration,
         setTimeWork,

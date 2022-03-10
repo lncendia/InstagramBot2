@@ -45,9 +45,9 @@ namespace Insta.Bot.CallbackQueryCommands
                 user.CurrentWorks.Add(work);
             }
 
-            await client.SendTextMessageAsync(query.From.Id,
-                "Выберите режим.", replyMarkup: Keyboards.SelectMode);
-            user.State = State.setMode;
+            user.State = State.setHashtagType;
+            await client.SendTextMessageAsync(query.From.Id, "Выберите тип публикаций.",
+                replyMarkup: Keyboards.SelectHashtagMode);
         }
 
         public bool Compare(CallbackQuery query, User user)

@@ -15,7 +15,7 @@ namespace Insta.Bot.Commands
         public async Task Execute(TelegramBotClient client, User user, Message message)
         {
             var x = await Operation.SendCodeTwoFactorAsync(user.EnterData.Api, message.Text);
-            if (x == null || !x.Succeeded)
+            if (x is not {Succeeded: true})
             {
                 await client.SendTextMessageAsync(message.From.Id,
                     "Ошибка. Попробуйте войти ещё раз.");

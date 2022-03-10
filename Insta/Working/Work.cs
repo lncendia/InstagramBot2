@@ -9,6 +9,7 @@ using Insta.Model;
 using InstagramApiSharp;
 using InstagramApiSharp.Classes;
 using InstagramApiSharp.Classes.Models;
+using InstagramApiSharp.WebApi;
 using Telegram.Bot;
 using Result = Insta.Enums.Result;
 using Timer = System.Timers.Timer;
@@ -35,6 +36,7 @@ namespace Insta.Working
         private int _countLike, _countSave, _countFollow;
 
         private Mode _mode;
+        private HashtagType _type;
         public readonly CancellationTokenSource CancelTokenSource = new();
 
         public Work(int id, Instagram inst, User user)
@@ -48,6 +50,11 @@ namespace Insta.Working
         public void SetMode(Mode mode)
         {
             _mode = mode;
+        }
+
+        public void SetHashtagType(HashtagType type)
+        {
+            _type = type;
         }
 
         public void SetHashtag(string hashtag)
@@ -135,54 +142,46 @@ namespace Insta.Working
 
         private async Task<IResult<InstaSectionMedia>> GetPosts()
         {
-            try
+            if (Instagram.Api == null)
             {
-                if (Instagram.Api == null)
+                await SendMessageStopAsync(Stop.logOut, "logOut");
+                return null;
+            }
+
+            await SendMessageStartAsync();
+
+            var posts = _type switch
+            {
+                HashtagType.recent => await Instagram.Api.GetRecentHashtagMediaListAsync(Hashtag,
+                    PaginationParameters.MaxPagesToLoad(34), CancelTokenSource.Token),
+                HashtagType.reels => await Instagram.Api.GetReelsHashtagMediaListAsync(Hashtag,
+                    PaginationParameters.MaxPagesToLoad(34), CancelTokenSource.Token),
+                _ => throw new ArgumentOutOfRangeException()
+            };
+
+            if (posts.Succeeded) return posts;
+            if (posts.Info.Exception is HttpRequestException or NullReferenceException)
+            {
+                if (Operation.CheckProxy(Instagram.Proxy))
                 {
                     await SendMessageStopAsync(Stop.logOut, "logOut");
                     return null;
                 }
 
-                await SendMessageStartAsync();
-
-                var posts = await Instagram.Api.HashtagProcessor.GetRecentHashtagMediaListAsync(Hashtag,
+                await Task.Delay(new TimeSpan(0, 2, 0));
+                posts = await Instagram.Api.HashtagProcessor.GetRecentHashtagMediaListAsync(Hashtag,
                     PaginationParameters.MaxPagesToLoad(34));
-                if (CancelTokenSource.IsCancellationRequested)
-                {
-                    await SendMessageStopAsync(Stop.ok);
-                }
-                else if (posts.Succeeded) return posts;
-                else if (posts.Info.Exception is HttpRequestException or NullReferenceException)
-                {
-                    if (Operation.CheckProxy(Instagram.Proxy))
-                    {
-                        await SendMessageStopAsync(Stop.logOut, "logOut");
-                        return null;
-                    }
-
-                    await Task.Delay(new TimeSpan(0, 2, 0));
-                    posts = await Instagram.Api.HashtagProcessor.GetRecentHashtagMediaListAsync(Hashtag,
-                        PaginationParameters.MaxPagesToLoad(34));
-                    if (posts.Succeeded) return posts;
-                    await SendMessageStopAsync(Stop.proxyError, "Ошибка прокси");
-                    return null;
-                }
-                else if (posts.Info.ResponseType == ResponseType.LoginRequired)
-                {
-                    await SendMessageStopAsync(Stop.logOut, "logOut");
-                }
-                else
-                {
-                    await SendMessageStopAsync(Stop.anotherError, "Ошибка при загрузке постов");
-                }
-
+                if (posts.Succeeded) return posts;
+                await SendMessageStopAsync(Stop.proxyError, "Ошибка прокси");
                 return null;
             }
-            catch (Exception ex)
-            {
-                await SendMessageStopAsync(Stop.anotherError, ex.Message);
-                return null;
-            }
+
+            if (posts.Info.ResponseType == ResponseType.LoginRequired)
+                await SendMessageStopAsync(Stop.logOut, "logOut");
+            else
+                await SendMessageStopAsync(Stop.anotherError, $"Ошибка при загрузке постов: {posts.Info.Message}");
+
+            return null;
         }
 
         private int _countNetworkProblems;
@@ -206,19 +205,15 @@ namespace Insta.Working
                 for (_iterator = Offset; _iterator < _countPosts; _iterator++)
                 {
                     var post = posts.Value.Medias[_iterator];
-                    if (CancelTokenSource.IsCancellationRequested)
-                    {
-                        await SendMessageStopAsync(Stop.ok);
-                        return;
-                    }
-
+                    CancelTokenSource.Token.ThrowIfCancellationRequested();
                     switch (_mode)
                     {
                         case Mode.like:
                             if (!post.HasLiked)
                             {
                                 switch (await CheckResultAsync(
-                                    (await Instagram.Api.MediaProcessor.LikeMediaAsync(post.InstaIdentifier)).Info))
+                                            (await Instagram.Api.MediaProcessor.LikeMediaAsync(post.InstaIdentifier))
+                                            .Info))
                                 {
                                     case Result.ok:
                                         ++_countLike;
@@ -233,7 +228,7 @@ namespace Insta.Working
                             break;
                         case Mode.save:
                             switch (await CheckResultAsync(
-                                (await Instagram.Api.MediaProcessor.SaveMediaAsync(post.InstaIdentifier)).Info))
+                                        (await Instagram.Api.MediaProcessor.SaveMediaAsync(post.InstaIdentifier)).Info))
                             {
                                 case Result.ok:
                                     ++_countSave;
@@ -247,7 +242,7 @@ namespace Insta.Working
                             break;
                         case Mode.follow:
                             switch (await CheckResultAsync(
-                                (await Instagram.Api.UserProcessor.FollowUserAsync(post.User.Pk)).Info))
+                                        (await Instagram.Api.UserProcessor.FollowUserAsync(post.User.Pk)).Info))
                             {
                                 case Result.ok:
                                     ++_countFollow;
@@ -263,7 +258,8 @@ namespace Insta.Working
                             if (!post.HasLiked)
                             {
                                 switch (await CheckResultAsync(
-                                    (await Instagram.Api.MediaProcessor.LikeMediaAsync(post.InstaIdentifier)).Info))
+                                            (await Instagram.Api.MediaProcessor.LikeMediaAsync(post.InstaIdentifier))
+                                            .Info))
                                 {
                                     case Result.ok:
                                         ++_countLike;
@@ -277,7 +273,7 @@ namespace Insta.Working
                             }
 
                             switch (await CheckResultAsync(
-                                (await Instagram.Api.MediaProcessor.SaveMediaAsync(post.InstaIdentifier)).Info))
+                                        (await Instagram.Api.MediaProcessor.SaveMediaAsync(post.InstaIdentifier)).Info))
                             {
                                 case Result.ok:
                                     ++_countSave;
@@ -295,6 +291,10 @@ namespace Insta.Working
                 }
 
                 await SendMessageStopAsync(Stop.ok, needBlock: true);
+            }
+            catch (OperationCanceledException)
+            {
+                await SendMessageStopAsync(Stop.ok);
             }
             catch (Exception ex)
             {
@@ -369,6 +369,9 @@ namespace Insta.Working
                         else
                             await SendMessageStopAsync(Stop.anotherError, result.ResponseType.ToString());
 
+                        return Result.stop;
+                    case ResponseType.InternalException:
+                        await SendMessageStopAsync(Stop.anotherError, result.ResponseType.ToString());
                         return Result.stop;
                     default:
                         await SendMessageStopAsync(Stop.anotherError, result.ResponseType.ToString());

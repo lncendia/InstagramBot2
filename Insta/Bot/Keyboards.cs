@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Insta.Enums;
 using Insta.Model;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.ReplyMarkups;
@@ -22,7 +23,7 @@ namespace Insta.Bot
 
         public static InlineKeyboardMarkup Back(string query)
         {
-            return new(InlineKeyboardButton.WithCallbackData("🔙 Назад", $"back_{query}"));
+            return new InlineKeyboardMarkup(InlineKeyboardButton.WithCallbackData("🔙 Назад", $"back_{query}"));
         }
 
         public static readonly InlineKeyboardMarkup Main =
@@ -43,11 +44,19 @@ namespace Insta.Bot
             {
                 new()
                 {
-                    InlineKeyboardButton.WithCallbackData("❤ Лайки", "startLike"),
-                    InlineKeyboardButton.WithCallbackData("💾 Сохранения", "startSave")
+                    InlineKeyboardButton.WithCallbackData("❤ Лайки", $"wtype_{Mode.like}"),
+                    InlineKeyboardButton.WithCallbackData("💾 Сохранения", $"wtype_{Mode.save}")
                 },
-                new() {InlineKeyboardButton.WithCallbackData("☑ Лайки + сохранения", "startAll")},
-                new() {InlineKeyboardButton.WithCallbackData("➕ Подписки", "startFollowing")},
+                new() {InlineKeyboardButton.WithCallbackData("☑ Лайки + сохранения", $"wtype_{Mode.likeAndSave}")},
+                new() {InlineKeyboardButton.WithCallbackData("➕ Подписки", $"wtype_{Mode.follow}")},
+                new() {InlineKeyboardButton.WithCallbackData("🔙 Назад", "back_selectHashtagMode")}
+            });
+
+        public static readonly InlineKeyboardMarkup SelectHashtagMode = new(
+            new List<List<InlineKeyboardButton>>
+            {
+                new() {InlineKeyboardButton.WithCallbackData("☑ Обычные", $"htype_{HashtagType.recent}")},
+                new() {InlineKeyboardButton.WithCallbackData("➕ Рилс", $"htype_{HashtagType.reels}")},
                 new() {InlineKeyboardButton.WithCallbackData("⭐ В главное меню", "mainMenu")}
             });
 
@@ -79,17 +88,16 @@ namespace Insta.Bot
 
         public static InlineKeyboardMarkup Select(User user)
         {
-            List<List<InlineKeyboardButton>> accounts = user.Instagrams.Select(inst => new List<InlineKeyboardButton>()
+            List<List<InlineKeyboardButton>> accounts = user.Instagrams.Select(inst => new List<InlineKeyboardButton>
             {
                 InlineKeyboardButton.WithCallbackData($"{Emodji[new Random().Next(0, Emodji.Length)]} {inst.Username}",
                     $"select_{inst.Id}")
             }).ToList();
 
-            accounts.Add(new List<InlineKeyboardButton>()
-                {InlineKeyboardButton.WithCallbackData("🗒 Выбрать все аккаунты", "selectAll")});
-            accounts.Add(new List<InlineKeyboardButton>()
+            accounts.Add(new List<InlineKeyboardButton> {InlineKeyboardButton.WithCallbackData("🗒 Выбрать все аккаунты", "selectAll")});
+            accounts.Add(new List<InlineKeyboardButton>
             {
-                InlineKeyboardButton.WithCallbackData("👈 Выбрать режим", "selectMode"),
+                InlineKeyboardButton.WithCallbackData("👈 Выбрать режим", "selectHashtagType"),
                 InlineKeyboardButton.WithCallbackData("⭐ В главное меню", "mainMenu")
             });
 
@@ -140,7 +148,7 @@ namespace Insta.Bot
 
         public static InlineKeyboardMarkup Email(string email)
         {
-            return new(new List<List<InlineKeyboardButton>>()
+            return new(new List<List<InlineKeyboardButton>>
             {
                 new()
                     {InlineKeyboardButton.WithCallbackData($"✉ Эл. адресс ({email})", "challengeEmail")},
@@ -152,7 +160,7 @@ namespace Insta.Bot
 
         public static InlineKeyboardMarkup Phone(string number)
         {
-            return new(new List<List<InlineKeyboardButton>>()
+            return new(new List<List<InlineKeyboardButton>>
             {
                 new()
                     {InlineKeyboardButton.WithCallbackData($"📲 Телефон ({number})", "challengePhone")},
@@ -164,7 +172,7 @@ namespace Insta.Bot
 
         public static InlineKeyboardMarkup PhoneAndEmail(string email, string number)
         {
-            return new(new List<List<InlineKeyboardButton>>()
+            return new(new List<List<InlineKeyboardButton>>
             {
                 new()
                     {InlineKeyboardButton.WithCallbackData($"📲 Телефон ({number})", "challengePhone")},

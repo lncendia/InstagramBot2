@@ -27,7 +27,7 @@ namespace Insta.Bot.CallbackQueryCommands
                 return;
             }
 
-            user.EnterData = new Instagram() {User = user};
+            user.EnterData = new Instagram {User = user};
             user.State = State.enterLogin;
             await client.SendTextMessageAsync(query.From.Id,
                 "Введите логин", replyMarkup: Keyboards.Main);
