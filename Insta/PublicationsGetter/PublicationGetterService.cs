@@ -1,6 +1,7 @@
 ﻿#nullable enable
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
@@ -37,7 +38,7 @@ namespace Insta.PublicationsGetter
                     if (!string.IsNullOrEmpty(parameters.NextMaxId)) dictionary.Add("max_id", parameters.NextMaxId);
                     if (parameters.NextMediaIds != null)
                         dictionary.Add("next_media_ids", JsonConvert.SerializeObject(parameters.NextMediaIds));
-                    var result = await api.SendPostRequestAsync(uri, dictionary);
+                    var result = await GetPosts(uri, dictionary, api);
                     if (!result.Succeeded)
                     {
                         return result.Info.ResponseType == ResponseType.InternalException
@@ -61,18 +62,7 @@ namespace Insta.PublicationsGetter
                          && parameters.PagesLoaded <= parameters.MaximumPagesToLoad);
 
                 data.Sections = list;
-                var fabric = Type.GetType("InstagramApiSharp.Converters.ConvertersFabric, InstagramApiSharp", true,
-                        true)!
-                    .GetProperty("Instance")
-                    ?.GetGetMethod()
-                    ?.Invoke(null, null);
-                if (fabric == null) throw new Exception("Failed to get a converters fabric.");
-                var medias = fabric.GetType().GetMethod("GetHashtagMediaListConverter")
-                    ?.Invoke(fabric, new[] {(object) data});
-                if (medias == null) throw new Exception("Failed to get a converter.");
-                InstaSectionMedia media =
-                    (InstaSectionMedia) medias.GetType().GetMethod("Convert")?.Invoke(medias, null)!;
-                return Result.Success(media);
+                return Result.Success(GetMedia(data));
             }
             catch (OperationCanceledException)
             {
@@ -109,7 +99,8 @@ namespace Insta.PublicationsGetter
                     if (!String.IsNullOrEmpty(parameters.NextMaxId)) dictionary.Add("max_id", parameters.NextMaxId);
                     if (parameters.NextMediaIds != null)
                         dictionary.Add("next_media_ids", JsonConvert.SerializeObject(parameters.NextMediaIds));
-                    var result = await api.SendPostRequestAsync(uri, dictionary);
+                    var result = await GetPosts(uri, dictionary, api);
+
                     if (!result.Succeeded)
                     {
                         return result.Info.ResponseType == ResponseType.InternalException
@@ -133,15 +124,7 @@ namespace Insta.PublicationsGetter
                          && parameters.PagesLoaded <= parameters.MaximumPagesToLoad);
 
                 data.Sections = list;
-                var fabric =
-                    Type.GetType("InstagramApiSharp.Converters.ConvertersFabric, InstagramApiSharp", true, true)!
-                        .GetProperty("Instance")?.GetGetMethod()?.Invoke(null, null);
-                if (fabric == null) throw new Exception("Failed to get a converters fabric.");
-                var medias = fabric.GetType().GetMethod("GetHashtagMediaListConverter")
-                    ?.Invoke(fabric, new[] {(object) data});
-                if (medias == null) throw new Exception("Failed to get a converter.");
-                var media = (InstaSectionMedia) medias.GetType().GetMethod("Convert")?.Invoke(medias, null)!;
-                return Result.Success(media);
+                return Result.Success(GetMedia(data));
             }
             catch (OperationCanceledException)
             {
@@ -155,6 +138,35 @@ namespace Insta.PublicationsGetter
             {
                 return Result.Fail(exception, default(InstaSectionMedia))!;
             }
+        }
+
+        private static async Task<IResult<string>> GetPosts(Uri uri, Dictionary<string, string> dictionary,
+            IInstaApi api)
+        {
+            int countFail = 0;
+            IResult<string> result;
+            do
+            {
+                result = await api.SendPostRequestAsync(uri, dictionary.ToDictionary(x => x.Key, x => x.Value));
+                if (result.Info.Message == "checkpoint_required") countFail++;
+                else break;
+            } while (countFail < 6);
+
+            return result;
+        }
+
+        private static InstaSectionMedia GetMedia(InstaSectionMediaListResponse data)
+        {
+            var fabric = Type.GetType("InstagramApiSharp.Converters.ConvertersFabric, InstagramApiSharp", true,
+                    true)!
+                .GetProperty("Instance")
+                ?.GetGetMethod()
+                ?.Invoke(null, null);
+            if (fabric == null) throw new Exception("Failed to get a converters fabric.");
+            var medias = fabric.GetType().GetMethod("GetHashtagMediaListConverter")
+                ?.Invoke(fabric, new[] {(object) data});
+            if (medias == null) throw new Exception("Failed to get a converter.");
+            return (InstaSectionMedia) medias.GetType().GetMethod("Convert")?.Invoke(medias, null)!;
         }
     }
 }
