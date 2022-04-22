@@ -6,10 +6,10 @@ using System.Timers;
 using Insta.Bot;
 using Insta.Enums;
 using Insta.Model;
+using Insta.PublicationsGetter;
 using InstagramApiSharp;
 using InstagramApiSharp.Classes;
 using InstagramApiSharp.Classes.Models;
-using InstagramApiSharp.WebApi;
 using Telegram.Bot;
 using Result = Insta.Enums.Result;
 using Timer = System.Timers.Timer;
@@ -30,8 +30,6 @@ namespace Insta.Working
         public bool IsStarted { get; private set; }
 
         private static readonly TelegramBotClient Tgbot = BotSettings.Get();
-
-        private static readonly Random Rnd = new();
 
         private int _countLike, _countSave, _countFollow;
 
@@ -90,11 +88,11 @@ namespace Insta.Working
             {
                 Timer = new Timer(time.Subtract(DateTime.Now).TotalMilliseconds) {Enabled = true};
                 Timer.Elapsed += Timer_ElapsedAsync;
-                await using Db db = new Db();
+                await using var db = new Db();
                 _works = new WorkTask
                 {
                     Hashtag = Hashtag, Instagram = Instagram, LowerDelay = LowerDelay, UpperDelay = UpperDelay,
-                    StartTime = time, Offset = Offset
+                    StartTime = time, Offset = Offset, Mode = _mode, HashtagType = _type
                 };
                 db.Update(Instagram);
                 db.Add(_works);
@@ -140,7 +138,7 @@ namespace Insta.Working
             await StartAsync();
         }
 
-        private async Task<IResult<InstaSectionMedia>> GetPosts()
+        private async Task<IResult<InstaSectionMedia>> GetPosts(IRequestDelay delay)
         {
             if (Instagram.Api == null)
             {
@@ -149,13 +147,12 @@ namespace Insta.Working
             }
 
             await SendMessageStartAsync();
-
             var posts = _type switch
             {
                 HashtagType.recent => await Instagram.Api.GetRecentHashtagMediaListAsync(Hashtag,
-                    PaginationParameters.MaxPagesToLoad(34), CancelTokenSource.Token),
+                    PaginationParameters.MaxPagesToLoad(34), delay, CancelTokenSource.Token),
                 HashtagType.reels => await Instagram.Api.GetReelsHashtagMediaListAsync(Hashtag,
-                    PaginationParameters.MaxPagesToLoad(34), CancelTokenSource.Token),
+                    PaginationParameters.MaxPagesToLoad(34), delay, CancelTokenSource.Token),
                 _ => throw new ArgumentOutOfRangeException()
             };
 
@@ -193,7 +190,8 @@ namespace Insta.Working
             try
             {
                 IsStarted = true;
-                var posts = await GetPosts();
+                var delay = RequestDelay.FromSeconds(LowerDelay, UpperDelay);
+                var posts = await GetPosts(delay);
                 if (posts is null) return;
                 _countPosts = posts.Value.Medias.Count;
                 if (Offset > _countPosts)
@@ -205,7 +203,6 @@ namespace Insta.Working
                 for (_iterator = Offset; _iterator < _countPosts; _iterator++)
                 {
                     var post = posts.Value.Medias[_iterator];
-                    CancelTokenSource.Token.ThrowIfCancellationRequested();
                     switch (_mode)
                     {
                         case Mode.like:
@@ -287,7 +284,7 @@ namespace Insta.Working
                             break;
                     }
 
-                    await Task.Delay(Rnd.Next(LowerDelay, UpperDelay) * 1000);
+                    await Task.Delay(delay.Value, CancelTokenSource.Token);
                 }
 
                 await SendMessageStopAsync(Stop.ok, needBlock: true);

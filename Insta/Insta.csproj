@@ -33,10 +33,4 @@
     <Folder Include="Interfaces" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Reference Include="InstagramApiSharp.WebApi, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null">
-      <HintPath>..\..\InstagramApiSharp.WebApi\InstagramApiSharp.WebApi\bin\Release\net6.0\publish\InstagramApiSharp.WebApi.dll</HintPath>
-    </Reference>
-  </ItemGroup>
-
 </Project>
