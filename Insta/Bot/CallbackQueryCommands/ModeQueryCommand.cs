@@ -6,22 +6,21 @@ using Telegram.Bot;
 using Telegram.Bot.Types;
 using User = Insta.Model.User;
 
-namespace Insta.Bot.CallbackQueryCommands
-{
-    public class ModeQueryCommand : ICallbackQueryCommand
-    {
-        public async Task Execute(TelegramBotClient client, User user, CallbackQuery query)
-        {
-            var mode = (Mode) Enum.Parse(typeof(Mode), query.Data[6..]);
-            user.CurrentWorks.ForEach(x => x.SetMode(mode));
-            user.State = State.setHashtag;
-            await client.EditMessageTextAsync(query.From.Id, query.Message.MessageId,
-                "Введите хештег без #.", replyMarkup: Keyboards.Back("selectMode"));
-        }
+namespace Insta.Bot.CallbackQueryCommands;
 
-        public bool Compare(CallbackQuery query, User user)
-        {
-            return query.Data.StartsWith("wtype") && user.State == State.setMode;
-        }
+public class ModeQueryCommand : ICallbackQueryCommand
+{
+    public async Task Execute(ITelegramBotClient client, User user, CallbackQuery query)
+    {
+        var mode = (Mode) Enum.Parse(typeof(Mode), query.Data[6..]);
+        user.CurrentWorks.ForEach(x => x.SetMode(mode));
+        user.State = State.setHashtag;
+        await client.EditMessageTextAsync(query.From.Id, query.Message.MessageId,
+            "Введите хештег без #.", replyMarkup: Keyboards.Back("selectMode"));
+    }
+
+    public bool Compare(CallbackQuery query, User user)
+    {
+        return query.Data.StartsWith("wtype") && user.State == State.setMode;
     }
 }

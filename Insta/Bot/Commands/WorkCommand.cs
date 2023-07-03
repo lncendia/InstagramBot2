@@ -6,19 +6,18 @@ using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
 using User = Insta.Model.User;
 
-namespace Insta.Bot.Commands
-{
-    public class WorkCommand : ITextCommand
-    {
-        public async Task Execute(TelegramBotClient client, User user, Message message)
-        {
-            await client.SendTextMessageAsync(message.Chat.Id,
-                "Выберите, что вы хотите сделать.", replyMarkup: Keyboards.Working);
-        }
+namespace Insta.Bot.Commands;
 
-        public bool Compare(Message message, User user)
-        {
-            return message.Type == MessageType.Text && message.Text == "❤ Отработка" && user.State == State.main;
-        }
+public class WorkCommand : ITextCommand
+{
+    public async Task Execute(ITelegramBotClient client, User user, Message message)
+    {
+        await client.SendTextMessageAsync(message.Chat.Id,
+            "Выберите, что вы хотите сделать.", replyMarkup: Keyboards.Working);
+    }
+
+    public bool Compare(Message message, User user)
+    {
+        return message.Type == MessageType.Text && message.Text == "❤ Отработка" && user.State == State.main;
     }
 }

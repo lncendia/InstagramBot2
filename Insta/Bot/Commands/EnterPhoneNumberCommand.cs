@@ -7,31 +7,30 @@ using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
 using User = Insta.Model.User;
 
-namespace Insta.Bot.Commands
+namespace Insta.Bot.Commands;
+
+public class EnterPhoneNumberCommand : ITextCommand
 {
-    public class EnterPhoneNumberCommand : ITextCommand
+    public async Task Execute(ITelegramBotClient client, User user, Message message)
     {
-        public async Task Execute(TelegramBotClient client, User user, Message message)
+        var isRight = await Operation.SubmitPhoneChallengeRequiredAsync(user.EnterData.Api,
+            message.Text);
+        if (isRight)
         {
-            bool isRight = await Operation.SubmitPhoneChallengeRequiredAsync(user.EnterData.Api,
-                message.Text);
-            if (isRight)
-            {
-                user.State = State.challengeRequiredAccept;
-                await client.SendTextMessageAsync(message.From.Id,
-                    "Код отправлен. Введите код из сообщения.", replyMarkup: Keyboards.Main);
-            }
-            else
-            {
-                await client.SendTextMessageAsync(message.From.Id,
-                    "Ошибка. Неверный номер.", replyMarkup: Keyboards.Main);
-            }
-
+            user.State = State.challengeRequiredAccept;
+            await client.SendTextMessageAsync(message.From.Id,
+                "Код отправлен. Введите код из сообщения.", replyMarkup: Keyboards.Main);
+        }
+        else
+        {
+            await client.SendTextMessageAsync(message.From.Id,
+                "Ошибка. Неверный номер.", replyMarkup: Keyboards.Main);
         }
 
-        public bool Compare(Message message, User user)
-        {
-            return message.Type == MessageType.Text && user.State == State.challengeRequiredPhoneCall;
-        }
+    }
+
+    public bool Compare(Message message, User user)
+    {
+        return message.Type == MessageType.Text && user.State == State.challengeRequiredPhoneCall;
     }
 }

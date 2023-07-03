@@ -6,34 +6,33 @@ using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
 using User = Insta.Model.User;
 
-namespace Insta.Bot.Commands
+namespace Insta.Bot.Commands;
+
+public class EnterOffsetCommand:ITextCommand
 {
-    public class EnterOffsetCommand:ITextCommand
+    public async Task Execute(ITelegramBotClient client, User user, Message message)
     {
-        public async Task Execute(TelegramBotClient client, User user, Message message)
+        if (!int.TryParse(message.Text, out var offset))
         {
-            if (!int.TryParse(message.Text, out var offset))
-            {
-                await client.SendTextMessageAsync(message.From.Id,
-                    "Неверный формат!", replyMarkup: Keyboards.Back("offsetSelect"));
-                return;
-            }
-
-            if (offset > 1020)
-            {
-                await client.SendTextMessageAsync(message.From.Id,
-                    "Слишком большой сдвиг!", replyMarkup: Keyboards.Back("offsetSelect"));
-                return;
-            }
-            user.CurrentWorks.ForEach(_ => _.SetOffset(offset));
-            user.State = State.setTimeWork;
-            await client.SendTextMessageAsync(user.Id,
-                "Выбирете, когда хотите начать.", replyMarkup: Keyboards.StartWork);
+            await client.SendTextMessageAsync(message.From.Id,
+                "Неверный формат!", replyMarkup: Keyboards.Back("offsetSelect"));
+            return;
         }
 
-        public bool Compare(Message message, User user)
+        if (offset > 1020)
         {
-            return message.Type == MessageType.Text && user.State == State.enterOffset;
+            await client.SendTextMessageAsync(message.From.Id,
+                "Слишком большой сдвиг!", replyMarkup: Keyboards.Back("offsetSelect"));
+            return;
         }
+        user.CurrentWorks.ForEach(_ => _.SetOffset(offset));
+        user.State = State.setTimeWork;
+        await client.SendTextMessageAsync(user.Id,
+            "Выбирете, когда хотите начать.", replyMarkup: Keyboards.StartWork);
+    }
+
+    public bool Compare(Message message, User user)
+    {
+        return message.Type == MessageType.Text && user.State == State.enterOffset;
     }
 }

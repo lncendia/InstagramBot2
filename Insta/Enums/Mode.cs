@@ -1,10 +1,9 @@
-﻿namespace Insta.Enums
+﻿namespace Insta.Enums;
+
+public enum Mode
 {
-    public enum Mode
-    {
-        like,
-        save,
-        follow,
-        likeAndSave
-    }
+    like,
+    save,
+    follow,
+    likeAndSave
 }

@@ -1,12 +1,11 @@
-﻿namespace Insta.Enums
+﻿namespace Insta.Enums;
+
+public enum Stop
 {
-    public enum Stop
-    {
-        ok,
-        limit,
-        logOut,
-        wrongOffset,
-        proxyError,
-        anotherError
-    }
+    ok,
+    limit,
+    logOut,
+    wrongOffset,
+    proxyError,
+    anotherError
 }

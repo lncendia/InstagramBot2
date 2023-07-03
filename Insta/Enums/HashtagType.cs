@@ -1,8 +1,7 @@
-﻿namespace Insta.Enums
+﻿namespace Insta.Enums;
+
+public enum HashtagType
 {
-    public enum HashtagType
-    {
-        recent,
-        reels
-    }
+    recent,
+    reels
 }

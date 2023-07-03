@@ -11,7 +11,7 @@ namespace LoadProxy
         static void Main(string[] args)
         {
             Console.WriteLine("Drag the file to the console.");
-            string path = Console.ReadLine();
+            var path = Console.ReadLine();
             if (string.IsNullOrEmpty(path))
             {
                 Console.WriteLine("Вы не ввели путь к файлу.");
@@ -27,7 +27,7 @@ namespace LoadProxy
             if (NotLoadedProxy.Any())
             {
                 Console.WriteLine("The unloaded proxies will be in the file log.txt");
-                using StreamWriter sw = new StreamWriter("log.txt", false);
+                using var sw = new StreamWriter("log.txt", false);
                 NotLoadedProxy.ForEach(async _=>
                 {
                     await sw.WriteLineAsync(_);
@@ -43,7 +43,7 @@ namespace LoadProxy
             {
                 var data = credentials.Split(':');
                 if (data.Length != 4) return false;
-                using Db db = new Db();
+                using var db = new Db();
                 var proxy = new Proxy
                 {
                     Host = data[0],
