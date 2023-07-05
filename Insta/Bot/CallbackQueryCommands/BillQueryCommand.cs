@@ -12,7 +12,7 @@ public class BillQueryCommand : ICallbackQueryCommand
 {
     public async Task Execute(ITelegramBotClient client, User user, CallbackQuery query)
     {
-        if (new Payment().CheckPay(user, query.Data[5..]))
+        if (new PaymentService().CheckPay(user, query.Data[5..]))
         {
             var message = query.Message.Text;
             message = message.Replace("❌ Статус: Не оплачено", "✔ Статус: Оплачено");

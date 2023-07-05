@@ -58,7 +58,7 @@ public class UpdateHandler : IUpdateHandler
             var command = BotSettings.Commands.FirstOrDefault(_ => _.Compare(message, user));
             if (command != null) await command.Execute(botClient, user, message);
         }
-        catch
+        catch(Exception ex)
         {
             Error(botClient, user);
         }

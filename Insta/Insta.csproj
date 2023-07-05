@@ -33,4 +33,10 @@
     <Folder Include="Interfaces" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Compile Remove="Payments\Customer.cs" />
+    <Compile Remove="Payments\MoneyAmount.cs" />
+    <Compile Remove="Payments\CreateBillRequest.cs" />
+  </ItemGroup>
+
 </Project>

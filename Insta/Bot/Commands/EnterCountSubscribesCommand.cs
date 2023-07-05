@@ -16,27 +16,20 @@ public class EnterCountSubscribesCommand : ITextCommand
     {
         if (!int.TryParse(message.Text, out var count))
         {
-            await client.SendTextMessageAsync(message.From.Id,
+            await client.SendTextMessageAsync(message.From!.Id,
                 "Введите число!", replyMarkup: Keyboards.Main);
             return;
         }
 
         if (count > 100)
         {
-            await client.SendTextMessageAsync(message.From.Id,
+            await client.SendTextMessageAsync(message.From!.Id,
                 "Слишком большое количество!", replyMarkup: Keyboards.Main);
             return;
         }
 
-        var billId = "";
         var bonus = count * BotSettings.Cfg.Bonus >= user.Bonus ? user.Bonus : count * BotSettings.Cfg.Bonus;
-        var payUrl = new Payment().AddTransaction(count * BotSettings.Cfg.Cost - bonus, user, count, ref billId);
-        if (payUrl == null)
-        {
-            await client.SendTextMessageAsync(message.From.Id,
-                "Произошла ошибка при создании счета. Попробуйте еще раз.", replyMarkup: Keyboards.Main);
-            return;
-        }
+        var payment = await new PaymentService().AddTransaction(count * BotSettings.Cfg.Cost - bonus, user);
 
         await using var db = new Db();
         db.Update(user);
@@ -44,9 +37,9 @@ public class EnterCountSubscribesCommand : ITextCommand
         await db.SaveChangesAsync();
         user.State = State.main;
 
-        await client.SendTextMessageAsync(message.From.Id,
-            $"💸 Оплата подписки на сумму {count * BotSettings.Cfg.Cost}₽ из которых {bonus}₽ списанно с бонусного счета.\n📆 Дата: {DateTime.Now:dd.MMM.yyyy}\n❌ Статус: Не оплачено.\n\n💳 Оплатите счет по ссылке.\n{payUrl}",
-            replyMarkup: Keyboards.CheckBill(billId));
+        await client.SendTextMessageAsync(message.From!.Id,
+            $"💸 Оплата подписки на сумму {count * BotSettings.Cfg.Cost}₽ из которых {bonus}₽ списанно с бонусного счета.\n📆 Дата: {DateTime.Now:dd.MMM.yyyy}\n❌ Статус: Не оплачено.\n\n💳 Оплатите счет по ссылке.\n{payment.PayUrl}",
+            replyMarkup: Keyboards.CheckBill(payment.BillId));
     }
 
     public bool Compare(Message message, User user)

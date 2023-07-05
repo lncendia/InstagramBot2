@@ -22,7 +22,7 @@ public class EnterSubscribeDataCommand : ITextCommand
             return;
         }
 
-        if (!int.TryParse(data[0], out var x))
+        if (!long.TryParse(data[0], out var x))
         {
             await client.SendTextMessageAsync(user.Id, "Неверный id.", replyMarkup:Keyboards.Main);
             return;
